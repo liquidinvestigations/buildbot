@@ -30,3 +30,6 @@ Imaages](https://cloud-images.ubuntu.com).
     ```sh
     kitchen destroy default-ubuntu-1604
     ```
+
+### Reference
+* https://help.ubuntu.com/community/UEC/Images#Ubuntu_Cloud_Guest_images_on_12.04_LTS_.28Precise.29_and_beyond_using_NoCloud
