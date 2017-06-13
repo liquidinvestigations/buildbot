@@ -6,8 +6,9 @@ Imaages](https://cloud-images.ubuntu.com).
 ### Usage
 * Install kitchen:
     ```sh
-    $ gem install test-kitchen
-    $ gem install kitchen-qemu
+    $ sudo apt install -y ruby
+    $ sudo gem install test-kitchen
+    $ sudo gem install kitchen-qemu
     ```
 
 * Prepare the base image:
