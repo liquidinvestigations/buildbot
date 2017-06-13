@@ -21,9 +21,11 @@ Imaages](https://cloud-images.ubuntu.com).
     $ kitchen login default-ubuntu-1604
     ```
 
-* Run a command:
+* Run a command, save the output to the shared folder:
     ```sh
-    $ kitchen exec default-ubuntu-1604 -c "df -h /"
+    $ kitchen exec default-ubuntu-1604 -c "echo world > /mnt/shared/hello"
+    $ cat shared/hello
+    world
     ```
 
 * Tear down the instance:

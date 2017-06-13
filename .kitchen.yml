@@ -7,6 +7,9 @@ platforms:
       image: liquid-buildbot/disk.img
       username: ubuntu
       password: ubuntu
+      hostshares:
+        - path: shared
+          mountpoint: /mnt/shared
 
 suites:
   - name: default
