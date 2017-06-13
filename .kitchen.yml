@@ -1,0 +1,12 @@
+driver:
+  name: qemu
+
+platforms:
+  - name: ubuntu-16.04
+    driver:
+      image: liquid-buildbot/disk.img
+      username: ubuntu
+      password: ubuntu
+
+suites:
+  - name: default
