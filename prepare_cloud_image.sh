@@ -29,6 +29,9 @@ password: ubuntu
 chpasswd: { expire: False }
 ssh_pwauth: True
 runcmd:
+  - "dd if=/dev/zero of=/var/local/swap1 bs=1M count=2048"
+  - "mkswap /var/local/swap1"
+  - "echo '/var/local/swap1 none swap sw 0 0' >> /etc/fstab"
   - "touch /etc/cloud/cloud-init.disabled"
   - "poweroff"
 EOF
