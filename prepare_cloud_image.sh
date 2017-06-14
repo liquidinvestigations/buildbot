@@ -12,8 +12,7 @@ set -e
 img_url="http://cloud-images.ubuntu.com/server/releases/16.04/release/ubuntu-16.04-server-cloudimg-amd64-disk1.img"
 
 set -x
-mkdir -p ~/.config/kitchen-qemu/liquid-buildbot
-cd ~/.config/kitchen-qemu/liquid-buildbot
+cd images
 
 if [ ! -f disk.img.orig ]; then
   wget $img_url -O disk.img.dist
