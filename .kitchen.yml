@@ -2,7 +2,7 @@ driver:
   name: qemu
 
 platforms:
-  - name: ubuntu-16.04
+  - name: amd64
     driver:
       image_path: ./images
       image: disk.img
@@ -13,4 +13,4 @@ platforms:
           mountpoint: /mnt/shared
 
 suites:
-  - name: default
+  - name: vm

@@ -18,20 +18,20 @@ Imaages](https://cloud-images.ubuntu.com).
 
 * Spin up an instance and log in:
     ```sh
-    $ kitchen create default-ubuntu-1604
-    $ kitchen login default-ubuntu-1604
+    $ kitchen create vm-amd64
+    $ kitchen login vm-amd64
     ```
 
 * Run a command, save the output to the shared folder:
     ```sh
-    $ kitchen exec default-ubuntu-1604 -c "echo world > /mnt/shared/hello"
+    $ kitchen exec vm-amd64 -c "echo world > /mnt/shared/hello"
     $ cat shared/hello
     world
     ```
 
 * Tear down the instance:
     ```sh
-    $ kitchen destroy default-ubuntu-1604
+    $ kitchen destroy vm-amd64
     ```
 
 ### Reference
