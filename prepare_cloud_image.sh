@@ -21,6 +21,7 @@ fi
 
 rm -f disk.img
 qemu-img create -f qcow2 -b disk.img.orig disk.img
+qemu-img resize disk.img 10G
 
 cat > cloud-init.yml <<EOF
 #cloud-config
