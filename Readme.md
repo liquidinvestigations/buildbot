@@ -34,6 +34,11 @@ Imaages](https://cloud-images.ubuntu.com).
     $ kitchen destroy vm-x86-64
     ```
 
+### ARM64 support
+To run the VM on ARM64, replace `vm-x86-64` with `vm-arm64` when calling
+`kitchen`. The `prepare_cloud_image.py` script auto-detects the current
+architecture and prepares the VM image accordingly.
+
 ### Reference
 * https://github.com/esmil/kitchen-qemu
 * https://help.ubuntu.com/community/UEC/Images#Ubuntu_Cloud_Guest_images_on_12.04_LTS_.28Precise.29_and_beyond_using_NoCloud

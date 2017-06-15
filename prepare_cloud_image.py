@@ -11,7 +11,7 @@ reference:
 """
 
 from pathlib import Path
-from subprocess import run
+from subprocess import run, PIPE
 
 CLOUD_INIT_YML = """\
 #cloud-config
@@ -104,9 +104,58 @@ class Builder_x86_64(BaseBuilder):
         ])
 
 
+class Builder_arm64(BaseBuilder):
+
+    base_image_url = (
+        'https://cloud-images.ubuntu.com/server/releases/16.04/release/'
+        'ubuntu-16.04-server-cloudimg-arm64-uefi1.img'
+    )
+
+    bios_url = (
+        'https://releases.linaro.org/components/kernel/uefi-linaro/15.12/'
+        'release/qemu64/QEMU_EFI.fd'
+    )
+
+    def __init__(self, images):
+        super().__init__(images)
+        self.arm_bios_fd = images / 'arm-bios.fd'
+
+    def download(self):
+        super().download()
+
+        if not self.arm_bios_fd.is_file():
+            run(['wget', str(self.bios_url), '-O', str(self.arm_bios_fd)])
+
+    def run_qemu(self):
+        run([
+            'qemu-system-aarch64',
+            '-enable-kvm',
+            '-nographic',
+            '-m', '512',
+            '-machine', 'virt',
+            '-cpu', 'host',
+            '-bios', str(self.arm_bios_fd),
+            '-netdev', 'user,id=user',
+            '-device', 'virtio-net-pci,netdev=user',
+            '-device', 'virtio-blk-device,drive=image',
+            '-drive', 'if=none,id=image,file=' + str(self.disk_img),
+            '-device', 'virtio-blk-device,drive=cloud-init',
+            '-drive', 'if=none,id=cloud-init,file=' + str(self.cloud_init_img),
+        ])
+
+
 def main():
     images = Path(__file__).resolve().parent / 'images'
-    Builder_x86_64(images).build()
+
+    uname = run(['uname', '-a'], stdout=PIPE).stdout.decode('latin1').split()
+    if 'x86_64' in uname:
+        builder_cls = Builder_x86_64
+    elif 'aarch64' in uname:
+        builder_cls = Builder_arm64
+    else:
+        raise RuntimeError("Can not detect architecture")
+
+    builder_cls(images).build()
 
 
 if __name__ == '__main__':

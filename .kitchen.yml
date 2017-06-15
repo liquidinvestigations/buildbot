@@ -12,5 +12,17 @@ platforms:
         - path: shared
           mountpoint: /mnt/shared
 
+  - name: arm64
+    driver:
+      image_path: ./images
+      bios: ./images/arm-bios.fd
+      image: disk.img
+      binary: ./qemu-hacked-arm
+      username: ubuntu
+      password: ubuntu
+      hostshares:
+        - path: shared
+          mountpoint: /mnt/shared
+
 suites:
   - name: vm
