@@ -6,7 +6,7 @@ TARGET=/mnt/target
 TEMPDIR=/tmp
 OUTPUT=/mnt/shared/output
 
-apt-add-repository ppa:ansible/ansible
+apt-add-repository -y ppa:ansible/ansible
 apt-get update
 apt install -y ansible git pv
 
