@@ -13,7 +13,7 @@ Imaages](https://cloud-images.ubuntu.com).
 
 * Prepare the base image:
     ```sh
-    $ ./prepare_cloud_image.sh
+    $ ./prepare_cloud_image.py
     ```
 
 * Spin up an instance and log in:
