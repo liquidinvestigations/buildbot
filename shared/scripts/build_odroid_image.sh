@@ -20,9 +20,6 @@ mount /dev/loop0 $TARGET
 mount --bind /proc $TARGET/proc
 echo "nameserver 8.8.8.8" > $TARGET/etc/resolv.conf
 
-apt-get install -qq qemu-user-static binfmt-support
-cp $(which qemu-arm-static) $TARGET/usr/bin
-
 chroot $TARGET apt-get update
 chroot $TARGET apt-get install -y python
 chroot $TARGET apt-get clean
@@ -31,7 +28,6 @@ cd $SETUPDIR/ansible
 touch vars/config.yml
 ansible-playbook board_chroot.yml
 
-rm $TARGET/usr/bin/qemu-arm-static
 umount $TARGET
 losetup -d /dev/loop0
 
