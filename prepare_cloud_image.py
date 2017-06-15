@@ -26,40 +26,88 @@ runcmd:
   - "poweroff"
 """
 
-def main(images):
-    img_url = 'http://cloud-images.ubuntu.com/server/releases/16.04/release/ubuntu-16.04-server-cloudimg-amd64-disk1.img'
+class BaseBuilder:
 
-    disk_img_orig = images / 'disk.img.orig'
-    disk_img_dist = images / 'disk.img.dist'
-    disk_img = images / 'disk.img'
+    base_image_url = None
 
-    if not disk_img_orig.is_file():
-        run(['wget', img_url, '-O', str(disk_img_dist)])
-        run(['qemu-img', 'convert', '-O', 'qcow2',
-            str(disk_img_dist), str(disk_img_orig)])
+    def __init__(self, images):
+        self.images = images
+        self.disk_img_orig = images / 'disk.img.orig'
+        self.disk_img_dist = images / 'disk.img.dist'
+        self.disk_img = images / 'disk.img'
 
-    if disk_img.is_file():
-        disk_img.unlink()
+    def download(self):
+        if not self.disk_img_orig.is_file():
+            run([
+                'wget', str(self.base_image_url),
+                '-O', str(self.disk_img_dist),
+            ])
+            run([
+                'qemu-img', 'convert',
+                '-O', 'qcow2',
+                str(self.disk_img_dist),
+                str(self.disk_img_orig),
+            ])
 
-    run(['qemu-img', 'create', '-f', 'qcow2',
-        '-b', str(disk_img_orig), str(disk_img)])
-    run(['qemu-img', 'resize', str(disk_img), '10G'])
+    def prepare_disk_image(self):
+        if self.disk_img.is_file():
+            self.disk_img.unlink()
 
-    cloud_init_yml = images / 'cloud-init.yml'
-    cloud_init_img = images / 'cloud-init.img'
-    with cloud_init_yml.open('w', encoding='utf8') as f:
-        f.write(CLOUD_INIT_YML)
+        run([
+            'qemu-img', 'create',
+            '-f', 'qcow2',
+            '-b', str(self.disk_img_orig),
+            str(self.disk_img),
+        ])
+        run([
+            'qemu-img', 'resize',
+            str(self.disk_img),
+            '10G',
+        ])
 
-    run(['cloud-localds', str(cloud_init_img), str(cloud_init_yml)])
+    def create_cloud_init_image(self):
+        cloud_init_yml = self.images / 'cloud-init.yml'
+        self.cloud_init_img = self.images / 'cloud-init.img'
+        with cloud_init_yml.open('w', encoding='utf8') as f:
+            f.write(CLOUD_INIT_YML)
 
-    run([
-        'qemu-system-x86_64',
-        '-enable-kvm', '-m', '512', '-nographic',
-        '-netdev', 'user,id=user', '-device', 'virtio-net-pci,netdev=user',
-        '-hda', str(disk_img),
-        '-hdb', str(cloud_init_img),
-    ])
+        run([
+            'cloud-localds',
+            str(self.cloud_init_img),
+            str(cloud_init_yml),
+        ])
+
+    def build(self):
+        self.download()
+        self.prepare_disk_image()
+        self.create_cloud_init_image()
+        self.run_qemu()
+
+
+class Builder_x86_64(BaseBuilder):
+
+    base_image_url = (
+        'http://cloud-images.ubuntu.com/server/releases/16.04/release/'
+        'ubuntu-16.04-server-cloudimg-amd64-disk1.img'
+    )
+
+    def run_qemu(self):
+        run([
+            'qemu-system-x86_64',
+            '-enable-kvm',
+            '-nographic',
+            '-m', '512',
+            '-netdev', 'user,id=user',
+            '-device', 'virtio-net-pci,netdev=user',
+            '-hda', str(self.disk_img),
+            '-hdb', str(self.cloud_init_img),
+        ])
+
+
+def main():
+    images = Path(__file__).resolve().parent / 'images'
+    Builder_x86_64(images).build()
+
 
 if __name__ == '__main__':
-    images = Path(__file__).resolve().parent / 'images'
-    main(images)
+    main()
