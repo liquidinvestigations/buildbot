@@ -36,4 +36,4 @@ umount $TARGET
 losetup -d /dev/loop0
 
 mkdir -p $OUTPUT
-pv < $TEMPDIR/odroid-c2.img | xz > $OUTPUT/odroid-c2-liquid.img.xz
+pv < $TEMPDIR/odroid-c2.img | xz -0 > $OUTPUT/odroid-c2-liquid.img.xz
