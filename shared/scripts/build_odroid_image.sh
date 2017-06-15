@@ -28,6 +28,7 @@ cd $SETUPDIR/ansible
 touch vars/config.yml
 ansible-playbook board_chroot.yml
 
+umount $TARGET/proc
 umount $TARGET
 losetup -d /dev/loop0
 
