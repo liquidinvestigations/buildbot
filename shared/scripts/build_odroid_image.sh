@@ -8,7 +8,7 @@ OUTPUT=/mnt/shared/output
 
 sudo apt-add-repository ppa:ansible/ansible
 sudo apt-get update
-sudo apt install -y ansible git
+sudo apt install -y ansible git pv
 
 git clone https://github.com/liquidinvestigations/setup $SETUPDIR
 
@@ -36,4 +36,4 @@ sudo umount $TARGET
 sudo losetup -d /dev/loop0
 
 mkdir -p $OUTPUT
-xz < $TEMPDIR/odroid-c2.img > $OUTPUT/odroid-c2-liquid.img.xz
+pv < $TEMPDIR/odroid-c2.img | xz > $OUTPUT/odroid-c2-liquid.img.xz
