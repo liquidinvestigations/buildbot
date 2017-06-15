@@ -2,7 +2,7 @@ driver:
   name: qemu
 
 platforms:
-  - name: amd64
+  - name: x86_64
     driver:
       image_path: ./images
       image: disk.img
