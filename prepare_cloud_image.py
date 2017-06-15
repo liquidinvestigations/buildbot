@@ -87,7 +87,7 @@ class BaseBuilder:
 class Builder_x86_64(BaseBuilder):
 
     base_image_url = (
-        'http://cloud-images.ubuntu.com/server/releases/16.04/release/'
+        'https://cloud-images.ubuntu.com/server/releases/16.04/release/'
         'ubuntu-16.04-server-cloudimg-amd64-disk1.img'
     )
 
