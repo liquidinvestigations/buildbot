@@ -8,7 +8,7 @@ OUTPUT=/mnt/shared/output
 
 apt-add-repository -y ppa:ansible/ansible
 apt-get update
-apt install -y ansible git pv
+apt-get install -y ansible git pv
 
 git clone https://github.com/liquidinvestigations/setup $SETUPDIR
 
