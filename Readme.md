@@ -1,7 +1,7 @@
 ## Liquid Buildbot
 An automated build environment that uses [Kitchen](http://kitchen.ci) and QEMU
 to create virtual machines based on [Ubuntu Cloud
-Imaages](https://cloud-images.ubuntu.com).
+Images](https://cloud-images.ubuntu.com).
 
 ### Usage
 * Install kitchen:
