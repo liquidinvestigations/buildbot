@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+
+import sys
+from pathlib import Path
+from subprocess import run, PIPE
+
+SHARED = Path(__file__).resolve().parent.parent / 'shared'
+
+def echo_run(cmd):
+    print('+', *cmd)
+    run(cmd)
+
+def main(script):
+    arch = run(['uname', '-m'], stdout=PIPE).stdout.decode('latin1').strip()
+    vm = 'vm-{}'.format(arch)
+    vm_script = Path('/mnt/shared') / script
+    cmd = 'sudo {}'.format(str(vm_script))
+    try:
+        echo_run(['kitchen', 'create', vm])
+        echo_run(['kitchen', 'exec', vm, '-c', cmd])
+    finally:
+        echo_run(['kitchen', 'destroy', vm])
+
+if __name__ == '__main__':
+    import sys
+    (script_txt,) = sys.argv[1:]
+    main(Path(script_txt).resolve().relative_to(SHARED))
