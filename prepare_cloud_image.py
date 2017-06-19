@@ -147,10 +147,10 @@ class Builder_arm64(BaseBuilder):
 def main():
     images = Path(__file__).resolve().parent / 'images'
 
-    uname = run(['uname', '-a'], stdout=PIPE).stdout.decode('latin1').split()
-    if 'x86_64' in uname:
+    arch = run(['uname', '-m'], stdout=PIPE).stdout.decode('latin1').strip()
+    if arch == 'x86_64':
         builder_cls = Builder_x86_64
-    elif 'aarch64' in uname:
+    elif arch == 'aarch64':
         builder_cls = Builder_arm64
     else:
         raise RuntimeError("Can not detect architecture")
