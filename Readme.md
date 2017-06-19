@@ -35,7 +35,7 @@ Images](https://cloud-images.ubuntu.com).
     ```
 
 ### ARM64 support
-To run the VM on ARM64, replace `vm-x86-64` with `vm-arm64` when calling
+To run the VM on ARM64, replace `vm-x86-64` with `vm-aarch64` when calling
 `kitchen`. The `prepare_cloud_image.py` script auto-detects the current
 architecture and prepares the VM image accordingly.
 

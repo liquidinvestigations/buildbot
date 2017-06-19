@@ -12,7 +12,7 @@ platforms:
         - path: shared
           mountpoint: /mnt/shared
 
-  - name: arm64
+  - name: aarch64
     driver:
       image_path: ./images
       bios: ./images/arm-bios.fd
