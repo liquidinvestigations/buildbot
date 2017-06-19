@@ -23,6 +23,8 @@ runcmd:
   - "mkswap /var/local/swap1"
   - "echo '/var/local/swap1 none swap sw 0 0' >> /etc/fstab"
   - "touch /etc/cloud/cloud-init.disabled"
+  - "systemctl disable apt-daily.service"
+  - "systemctl disable apt-daily.timer"
   - "poweroff"
 """
 
