@@ -1,4 +1,9 @@
 #!/bin/bash
+
+###
+# Build a Liquid image and save it to `shared/output`
+###
+
 set -e
 
 SETUPDIR=/tmp/liquid-setup
