@@ -1,7 +1,8 @@
 ## Liquid Buildbot
 An automated build environment that uses [Kitchen](http://kitchen.ci) and QEMU
 to create virtual machines based on [Ubuntu Cloud
-Images](https://cloud-images.ubuntu.com).
+Images](https://cloud-images.ubuntu.com). It supports the `x86_64` and
+`aarch64` architectures.
 
 ### Usage
 * Install kitchen:
@@ -16,28 +17,22 @@ Images](https://cloud-images.ubuntu.com).
     $ ./prepare_cloud_image.py
     ```
 
-* Spin up an instance and log in:
+* Run a build script:
     ```sh
-    $ kitchen create vm-x86-64
-    $ kitchen login vm-x86-64
+    $ bin/build shared/scripts/build_odroid_image.sh
     ```
 
-* Run a command, save the output to the shared folder:
+* Or spin up an instance by hand:
+
     ```sh
-    $ kitchen exec vm-x86-64 -c "echo world > /mnt/shared/hello"
+    $ VM=vm-$(uname -m)
+    $ kitchen create $VM
+    $ kitchen login $VM
+    $ kitchen exec $VM -c "echo world > /mnt/shared/hello"
     $ cat shared/hello
     world
+    $ kitchen destroy $VM
     ```
-
-* Tear down the instance:
-    ```sh
-    $ kitchen destroy vm-x86-64
-    ```
-
-### ARM64 support
-To run the VM on ARM64, replace `vm-x86-64` with `vm-aarch64` when calling
-`kitchen`. The `prepare_cloud_image.py` script auto-detects the current
-architecture and prepares the VM image accordingly.
 
 ### Reference
 * https://github.com/esmil/kitchen-qemu
