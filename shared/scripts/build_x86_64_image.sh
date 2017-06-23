@@ -10,31 +10,26 @@ SETUPDIR=/tmp/liquid-setup
 TARGET=/mnt/target
 TEMPDIR=/tmp
 OUTPUT=/mnt/shared/output
+IMAGE=/mnt/shared/ubuntu-x86_64-raw.img
 
 set -x
 
 apt-add-repository -y ppa:ansible/ansible
 apt-get update
-apt-get install -y ansible git pv
+apt-get install -y ansible git pv qemu-utils
 
 git clone https://github.com/liquidinvestigations/setup $SETUPDIR
 
-# The image needs to be downloaded manually from:
-# https://cloud-images.ubuntu.com/server/releases/16.04/release/ubuntu-16.04-server-cloudimg-amd64-disk1.img
-# and converted to raw format using:
-# qemu-img convert -f qcow2 -O raw ubuntu-16.04-server-cloudimg-amd64-disk1.img ubuntu-raw.img
+curl https://cloud-images.ubuntu.com/releases/16.04/release/ubuntu-16.04-server-cloudimg-amd64-disk1.img > /mnt/shared/ubuntu-x86_64-cow2.img
+qemu-img convert -f qcow2 -O raw /mnt/shared/ubuntu-x86_64-cow2.img $IMAGE
 
-# It also needs to be resized to 4 gigabytes, using
-# truncate -s 4G ubuntu-raw.img
-# then deleting and recreating the partition inside, and running
-# resize2fs to resize the filesystem.
+truncate -s 4G $IMAGE
+# This assumes there is only one partition in the image.
+# Keep start sector and type, but use all sectors up to the end of the image.
+sfdisk -d $IMAGE | sed 's/size=[^,]\+,//' | sfdisk $IMAGE
 
-# Finally, it needs to be placed in the shared directory, so the VM can see it.
-
-#curl https://liquidinvestigations.org/images/ubuntu64-16.04-minimal-odroid-c2-20160815-4G.img.xz | xzcat > $TEMPDIR/odroid-c2.img
-#cp /mnt/shared/ubuntu-raw.img $TEMPDIR
-
-losetup /dev/loop0 /mnt/shared/ubuntu-raw.img -o 1048576
+losetup /dev/loop0 $IMAGE -o 1048576
+resize2fs /dev/loop0
 mkdir -p $TARGET
 mount /dev/loop0 $TARGET
 mount --bind /proc $TARGET/proc
@@ -55,5 +50,5 @@ umount $TARGET/dev
 umount $TARGET
 losetup -d /dev/loop0
 
-#mkdir -p $OUTPUT
-#pv < $TEMPDIR/odroid-c2.img | xz -0 > $OUTPUT/odroid-c2-liquid.img.xz
+mkdir -p $OUTPUT
+pv < $IMAGE | xz -0 > $OUTPUT/x86_64-liquid.img.xz
