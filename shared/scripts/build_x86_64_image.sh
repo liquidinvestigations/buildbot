@@ -45,6 +45,10 @@ cd $SETUPDIR/ansible
 touch vars/config.yml
 ansible-playbook board_chroot.yml
 
+# console= setting referencing non-existant port can cause hangs during boot:
+# https://bugs.launchpad.net/cloud-images/+bug/1573095
+sed -i 's/console=hvc0 *//g' $TARGET/boot/grub/menu.lst
+
 umount $TARGET/proc
 umount $TARGET/dev
 umount $TARGET
