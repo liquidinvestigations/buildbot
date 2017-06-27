@@ -8,6 +8,7 @@ Images](https://cloud-images.ubuntu.com). It supports the `x86_64` and
 * Install kitchen:
     ```sh
     $ sudo apt install -y ruby
+    $ sudo apt install -y cloud-utils
     $ sudo gem install test-kitchen
     $ sudo gem install kitchen-qemu
     ```
