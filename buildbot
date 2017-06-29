@@ -3,6 +3,7 @@
 import sys
 from pathlib import Path
 from subprocess import run, PIPE
+from contextlib import contextmanager
 
 SHARED = Path(__file__).resolve().parent / 'shared'
 
@@ -10,16 +11,21 @@ def echo_run(cmd):
     print('+', *cmd)
     run(cmd)
 
-def main(script):
+@contextmanager
+def instance():
     arch = run(['uname', '-m'], stdout=PIPE).stdout.decode('latin1').strip()
     vm = 'vm-{}'.format(arch).replace('_', '-')
-    vm_script = Path('/mnt/shared') / script
-    cmd = 'sudo {}'.format(str(vm_script))
     try:
         echo_run(['kitchen', 'create', vm])
-        echo_run(['kitchen', 'exec', vm, '-c', cmd])
+        yield vm
     finally:
         echo_run(['kitchen', 'destroy', vm])
+
+def main(script):
+    with instance() as vm:
+        vm_script = Path('/mnt/shared') / script
+        cmd = 'sudo {}'.format(str(vm_script))
+        echo_run(['kitchen', 'exec', vm, '-c', cmd])
 
 if __name__ == '__main__':
     import sys
