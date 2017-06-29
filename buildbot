@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from subprocess import run, PIPE
 from contextlib import contextmanager
+from argparse import ArgumentParser
 
 SHARED = Path(__file__).resolve().parent / 'shared'
 
@@ -21,16 +22,27 @@ def instance():
     finally:
         echo_run(['kitchen', 'destroy', vm])
 
-def run_buildbot(script):
+def run_buildbot(*args):
+    parser = ArgumentParser()
+    parser.add_argument('script')
+    options = parser.parse_args(args)
+
+    script = Path(options.script).resolve().relative_to(SHARED)
+
     with instance() as vm:
         vm_script = Path('/mnt/shared') / script
         cmd = 'sudo {}'.format(str(vm_script))
         echo_run(['kitchen', 'exec', vm, '-c', cmd])
 
+COMMANDS = {
+    'run': run_buildbot,
+}
+
 def main():
-    import sys
-    (script_txt,) = sys.argv[1:]
-    run_buildbot(Path(script_txt).resolve().relative_to(SHARED))
+    parser = ArgumentParser()
+    parser.add_argument('command', choices=COMMANDS.keys())
+    (options, args) = parser.parse_known_args()
+    COMMANDS[options.command](*args)
 
 if __name__ == '__main__':
     main()
