@@ -27,7 +27,10 @@ def run_buildbot(script):
         cmd = 'sudo {}'.format(str(vm_script))
         echo_run(['kitchen', 'exec', vm, '-c', cmd])
 
-if __name__ == '__main__':
+def main():
     import sys
     (script_txt,) = sys.argv[1:]
     run_buildbot(Path(script_txt).resolve().relative_to(SHARED))
+
+if __name__ == '__main__':
+    main()
