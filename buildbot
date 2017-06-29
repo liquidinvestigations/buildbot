@@ -21,7 +21,7 @@ def instance():
     finally:
         echo_run(['kitchen', 'destroy', vm])
 
-def main(script):
+def run_buildbot(script):
     with instance() as vm:
         vm_script = Path('/mnt/shared') / script
         cmd = 'sudo {}'.format(str(vm_script))
@@ -30,4 +30,4 @@ def main(script):
 if __name__ == '__main__':
     import sys
     (script_txt,) = sys.argv[1:]
-    main(Path(script_txt).resolve().relative_to(SHARED))
+    run_buildbot(Path(script_txt).resolve().relative_to(SHARED))
