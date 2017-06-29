@@ -18,7 +18,7 @@ Images](https://cloud-images.ubuntu.com). It supports the `x86_64` and
 
 * Run a build script:
     ```sh
-    $ bin/build shared/scripts/build_odroid_image.sh
+    $ ./buildbot shared/scripts/build_odroid_image.sh
     ```
 
 * Or spin up an instance by hand:

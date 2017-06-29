@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from subprocess import run, PIPE
 
-SHARED = Path(__file__).resolve().parent.parent / 'shared'
+SHARED = Path(__file__).resolve().parent / 'shared'
 
 def echo_run(cmd):
     print('+', *cmd)
