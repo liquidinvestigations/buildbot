@@ -4,39 +4,39 @@ to create virtual machines based on [Ubuntu Cloud
 Images](https://cloud-images.ubuntu.com). It supports the `x86_64` and
 `aarch64` architectures.
 
+### Setup
+Install Kitchen with the QEMU driver:
+```shell
+$ sudo apt install -y ruby cloud-utils qemu-kvm genisoimage
+$ sudo gem install test-kitchen kitchen-qemu
+```
+
+Prepare a QEMU image to run our instance:
+```shell
+$ ./prepare_cloud_image.py
+```
+
 ### Usage
-* Install kitchen:
-    ```sh
-    $ sudo apt install -y ruby cloud-utils qemu-kvm genisoimage
-    $ sudo gem install test-kitchen kitchen-qemu
-    ```
+Run a script from the `shared` folder - it runs as `root` user in the instance:
+```shell
+$ ./buildbot run shared/scripts/build_odroid_image.sh
+```
 
-* Prepare the base image:
-    ```sh
-    $ ./prepare_cloud_image.py
-    ```
+Log into an ephemeral machine:
+```shell
+$ ./buildbot login
+```
 
-* Run a build script:
-    ```sh
-    $ ./buildbot run shared/scripts/build_odroid_image.sh
-    ```
-
-* Log into an ephemeral machine:
-    ```sh
-    $ ./buildbot login
-    ```
-
-* Or spin up an instance by hand:
-
-    ```sh
-    $ VM=vm-$(uname -m)
-    $ kitchen create $VM
-    $ kitchen login $VM
-    $ kitchen exec $VM -c "echo world > /mnt/shared/hello"
-    $ cat shared/hello
-    world
-    $ kitchen destroy $VM
-    ```
+Or control the instance using Kitchen commands:
+```shell
+$ instance="vm-$(uname -m)"
+$ kitchen create $instance
+$ kitchen login $instance
+$ kitchen exec $instance -c "echo world > /mnt/shared/hello"
+$ cat shared/hello
+world
+$ kitchen destroy $instance
+```
 
 ### Converting the image
 The build scripts produce "raw" images. You can convert them to VMware or
