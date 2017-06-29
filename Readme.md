@@ -21,6 +21,11 @@ Images](https://cloud-images.ubuntu.com). It supports the `x86_64` and
     $ ./buildbot run shared/scripts/build_odroid_image.sh
     ```
 
+* Log into an ephemeral machine:
+    ```sh
+    $ ./buildbot login
+    ```
+
 * Or spin up an instance by hand:
 
     ```sh

@@ -34,8 +34,13 @@ def run_buildbot(*args):
         cmd = 'sudo {}'.format(str(vm_script))
         echo_run(['kitchen', 'exec', vm, '-c', cmd])
 
+def login():
+    with instance() as vm:
+        echo_run(['kitchen', 'login', vm])
+
 COMMANDS = {
     'run': run_buildbot,
+    'login': login,
 }
 
 def main():
