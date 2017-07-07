@@ -41,3 +41,4 @@ $ kitchen destroy $instance
 ### Reference
 * https://github.com/esmil/kitchen-qemu
 * https://help.ubuntu.com/community/UEC/Images#Ubuntu_Cloud_Guest_images_on_12.04_LTS_.28Precise.29_and_beyond_using_NoCloud
+* http://odroid.com/dokuwiki/doku.php?id=en:c2_ubuntu_cloud
