@@ -12,6 +12,7 @@ reference:
 
 from pathlib import Path
 from subprocess import run, PIPE
+from argparse import ArgumentParser
 
 CLOUD_INIT_YML = """\
 #cloud-config
@@ -31,6 +32,25 @@ runcmd:
 class BaseBuilder:
 
     base_image_url = None
+
+    kitchen_yml_template = """\
+driver:
+  name: qemu
+
+platforms:
+  - name: {name}
+    driver:
+      image_path: ./images
+      image: disk.img
+      username: ubuntu
+      password: ubuntu
+      hostshares:
+        - path: shared
+          mountpoint: /mnt/shared
+{extra}
+suites:
+  - name: vm
+"""
 
     def __init__(self, images):
         self.images = images
@@ -83,7 +103,16 @@ class BaseBuilder:
         self.download()
         self.prepare_disk_image()
         self.create_cloud_init_image()
+        self.create_kitchen_yml()
         self.run_qemu()
+
+    def create_kitchen_yml(self, name, extra = ()):
+        extra_fmt = ''
+        for l in extra:
+            extra_fmt += '      ' + l + '\n'
+
+        with open('.kitchen.yml', 'w') as f:
+            f.write(self.kitchen_yml_template.format(name=name, extra=extra_fmt))
 
 
 class Builder_x86_64(BaseBuilder):
@@ -104,6 +133,9 @@ class Builder_x86_64(BaseBuilder):
             '-hda', str(self.disk_img),
             '-hdb', str(self.cloud_init_img),
         ])
+
+    def create_kitchen_yml(self, name='x86_64', extra=()):
+        super().create_kitchen_yml(name, extra)
 
 
 class Builder_arm64(BaseBuilder):
@@ -128,14 +160,12 @@ class Builder_arm64(BaseBuilder):
         if not self.arm_bios_fd.is_file():
             run(['wget', str(self.bios_url), '-O', str(self.arm_bios_fd)])
 
-    def run_qemu(self):
-        run([
+    def qemu_args(self):
+        return [
             'qemu-system-aarch64',
-            '-enable-kvm',
             '-nographic',
             '-m', '512',
             '-machine', 'virt',
-            '-cpu', 'host',
             '-bios', str(self.arm_bios_fd),
             '-netdev', 'user,id=user',
             '-device', 'virtio-net-pci,netdev=user',
@@ -143,19 +173,55 @@ class Builder_arm64(BaseBuilder):
             '-drive', 'if=none,id=image,file=' + str(self.disk_img),
             '-device', 'virtio-blk-device,drive=cloud-init',
             '-drive', 'if=none,id=cloud-init,file=' + str(self.cloud_init_img),
-        ])
+        ]
+
+    def run_qemu(self):
+        run(self.qemu_args() + [ '-cpu', 'host', '-enable-kvm' ])
+
+    def create_kitchen_yml(self, name='aarch64', extra=()):
+        super().create_kitchen_yml(name,
+            ( 'bios: ' + str(self.arm_bios_fd),
+              'binary: ./qemu-hacked-arm', ) + extra)
+
+
+class Builder_emuarm64(Builder_arm64):
+
+    def __init__(self, images):
+        super().__init__(images)
+        self.arm_bios_fd = images / 'arm-bios.fd'
+
+    def download(self):
+        super().download()
+
+        if not self.arm_bios_fd.is_file():
+            run(['wget', str(self.bios_url), '-O', str(self.arm_bios_fd)])
+
+    def run_qemu(self):
+        run(self.qemu_args() + [ '-cpu', 'cortex-a53' ])
+
+    def create_kitchen_yml(self, name='aarch64', extra=()):
+        super().create_kitchen_yml(name,
+            ( 'args: [ cpu: cortex-a53 ]',
+              'kvm: false' ) + extra)
 
 
 def main():
     images = Path(__file__).resolve().parent / 'images'
 
-    arch = run(['uname', '-m'], stdout=PIPE).stdout.decode('latin1').strip()
-    if arch == 'x86_64':
-        builder_cls = Builder_x86_64
-    elif arch == 'aarch64':
-        builder_cls = Builder_arm64
+    parser = ArgumentParser()
+    parser.add_argument('--emulate-arm64', action='store_true')
+    options = parser.parse_args()
+
+    if options.emulate_arm64:
+        builder_cls = Builder_emuarm64
     else:
-        raise RuntimeError("Can not detect architecture")
+        arch = run(['uname', '-m'], stdout=PIPE).stdout.decode('latin1').strip()
+        if arch == 'x86_64':
+            builder_cls = Builder_x86_64
+        elif arch == 'aarch64':
+            builder_cls = Builder_arm64
+        else:
+            raise RuntimeError("Can not detect architecture")
 
     builder_cls(images).build()
 
