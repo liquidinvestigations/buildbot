@@ -10,7 +10,7 @@ SHARED = Path(__file__).resolve().parent / 'shared'
 
 def echo_run(cmd):
     print('+', *cmd)
-    run(cmd)
+    run(cmd, check=True)
 
 @contextmanager
 def instance():
