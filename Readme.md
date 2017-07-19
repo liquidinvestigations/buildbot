@@ -28,6 +28,11 @@ Log into an ephemeral machine:
 $ ./buildbot login
 ```
 
+For debugging, you can connect to the VM's serial console:
+```shell
+$ ./buildbot console
+```
+
 Or control the instance using Kitchen commands:
 ```shell
 $ instance="vm-$(uname -m)"
