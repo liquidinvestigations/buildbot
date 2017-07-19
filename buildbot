@@ -12,9 +12,13 @@ def echo_run(cmd):
     print('+', *cmd)
     run(cmd, check=True)
 
+def get_vm_name():
+    process = run(['kitchen', 'list', '--bare'], stdout=PIPE)
+    return process.stdout.decode('latin1').strip()
+
 @contextmanager
 def instance():
-    vm = run(['kitchen', 'list', '--bare'], stdout=PIPE).stdout.decode('latin1').strip()
+    vm = get_vm_name()
     try:
         echo_run(['kitchen', 'create', vm])
         yield vm
