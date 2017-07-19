@@ -33,17 +33,6 @@ For debugging, you can connect to the VM's serial console:
 $ ./buildbot console
 ```
 
-Or control the instance using Kitchen commands:
-```shell
-$ instance="vm-$(uname -m)"
-$ kitchen create $instance
-$ kitchen login $instance
-$ kitchen exec $instance -c "echo world > /mnt/shared/hello"
-$ cat shared/hello
-world
-$ kitchen destroy $instance
-```
-
 ### Reference
 * https://github.com/esmil/kitchen-qemu
 * https://help.ubuntu.com/community/UEC/Images#Ubuntu_Cloud_Guest_images_on_12.04_LTS_.28Precise.29_and_beyond_using_NoCloud
