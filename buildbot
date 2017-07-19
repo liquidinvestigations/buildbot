@@ -41,9 +41,15 @@ def login():
     with instance() as vm:
         echo_run(['kitchen', 'login', vm])
 
+def console():
+    vm = get_vm_name()
+    socket_path = '.kitchen/{}.mon'.format(vm)
+    echo_run(['socat', '-,cfmakeraw,escape=0xf', socket_path])
+
 COMMANDS = {
     'run': run_buildbot,
     'login': login,
+    'console': console,
 }
 
 def main():
