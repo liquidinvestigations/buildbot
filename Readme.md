@@ -11,8 +11,9 @@ $ sudo apt install -y ruby cloud-utils qemu-kvm genisoimage
 $ sudo gem install test-kitchen kitchen-qemu
 ```
 
-Prepare a QEMU image to run our instance:
+Clone buildbot and prepare a QEMU image:
 ```shell
+$ git clone https://github.com/liquidinvestigations/buildbot.git
 $ ./prepare_cloud_image.py
 ```
 
