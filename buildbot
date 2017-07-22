@@ -13,7 +13,7 @@ def echo_run(cmd):
     run(cmd, check=True)
 
 def get_vm_name():
-    process = run(['kitchen', 'list', '--bare'], stdout=PIPE)
+    process = run(['kitchen', 'list', '--bare'], stdout=PIPE, check=True)
     return process.stdout.decode('latin1').strip()
 
 @contextmanager
