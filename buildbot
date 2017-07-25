@@ -5,6 +5,7 @@ from pathlib import Path
 from subprocess import run, PIPE
 from contextlib import contextmanager
 from argparse import ArgumentParser
+import shlex
 
 SHARED = Path(__file__).resolve().parent / 'shared'
 
@@ -28,6 +29,7 @@ def instance():
 def run_buildbot(*args):
     parser = ArgumentParser()
     parser.add_argument('script')
+    parser.add_argument('args', nargs='*')
     options = parser.parse_args(args)
 
     script = Path(options.script).resolve().relative_to(SHARED)
@@ -35,6 +37,8 @@ def run_buildbot(*args):
     with instance() as vm:
         vm_script = Path('/mnt/shared') / script
         cmd = 'sudo {}'.format(str(vm_script))
+        for arg in options.args:
+            cmd += ' {}'.format(shlex.quote(arg))
         echo_run(['kitchen', 'exec', vm, '-c', cmd])
 
 def login():
