@@ -4,13 +4,13 @@ pipeline {
         stage('Prepare Cloud Image') {
             agent any
             steps {
-                sh 'git clone https://github.com/liquidinvestigations/setup.git shared/setup'
                 sh './prepare_cloud_image.py'
             }
         }
-        stage('Write Configuration') {
+        stage('Install Setup and Write Configuration') {
             agent any
             steps {
+                sh 'git clone https://github.com/liquidinvestigations/setup.git shared/setup'
                 sh '''
                 echo "liquid_domain: liquid.jenkins-build.example.org" > ./shared/setup/ansible/vars/config.yml
                 echo "devel: true" >> ./shared/setup/ansible/vars/config.yml
