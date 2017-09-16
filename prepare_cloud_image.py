@@ -63,6 +63,7 @@ suites:
             check_call([
                 'wget', str(self.base_image_url),
                 '-O', str(self.disk_img_dist),
+                '-q'
             ])
             check_call([
                 'qemu-img', 'convert',
@@ -158,7 +159,7 @@ class Builder_arm64(BaseBuilder):
         super().download()
 
         if not self.arm_bios_fd.is_file():
-            check_call(['wget', str(self.bios_url), '-O', str(self.arm_bios_fd)])
+            check_call(['wget', str(self.bios_url), '-O', str(self.arm_bios_fd), '-q'])
 
     def qemu_args(self):
         return [
@@ -194,7 +195,7 @@ class Builder_emuarm64(Builder_arm64):
         super().download()
 
         if not self.arm_bios_fd.is_file():
-            check_call(['wget', str(self.bios_url), '-O', str(self.arm_bios_fd)])
+            check_call(['wget', str(self.bios_url), '-O', str(self.arm_bios_fd), '-q'])
 
     def run_qemu(self):
         check_call(self.qemu_args() + [ '-cpu', 'cortex-a53' ])
