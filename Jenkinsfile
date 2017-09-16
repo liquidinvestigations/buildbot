@@ -23,6 +23,7 @@ stage('Build Image') {
     },
     odroid_c2: {
         node('odroid_c2') {
+            checkout scm
             try {
                 sh 'git clone https://github.com/liquidinvestigations/setup.git shared/setup'
                 sh '''
@@ -38,5 +39,6 @@ stage('Build Image') {
                     deleteDir()
             }
         }
-    }
+    },
+    failFast: false
 }
