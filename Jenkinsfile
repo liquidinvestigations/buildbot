@@ -1,12 +1,6 @@
 pipeline {
     agent any
     stages {
-        stage('Prepare Cloud Image') {
-            agent any
-            steps {
-                sh './prepare_cloud_image.py'
-            }
-        }
         stage('Install Setup and Write Configuration') {
             agent any
             steps {
@@ -22,25 +16,15 @@ pipeline {
                 label 'cloud'
             }
             steps {
+                sh './prepare_cloud_image.py'
                 sh './buildbot run shared/setup/bin/build_image cloud'
-            }
-            post {
-                always {
-                    archive 'shared/ubuntu-x86_64-raw.img'
-                }
-            }
-        }
-
-        stage('Convert Cloud Images') {
-            agent {
-                label 'cloud'
-            }
-            steps {
                 sh 'qemu-img convert -f raw -O qcow2 shared/ubuntu-x86_64-raw.img shared/ubuntu-x86_64-cow2.img'
             }
             post {
                 always {
+                    archive 'shared/ubuntu-x86_64-raw.img'
                     archive 'shared/ubuntu-x86_64-cow2.img'
+                    deleteDir()
                 }
             }
         }
@@ -50,11 +34,13 @@ pipeline {
                 label 'odroid_c2'
             }
             steps {
+                sh './prepare_cloud_image.py'
                 sh './buildbot run shared/setup/bin/build_image odroid_c2'
             }
             post {
                 always {
                     archive 'shared/ubuntu-odroid_c2-raw.img'
+                    deleteDir()
                 }
             }
         }
