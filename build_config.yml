@@ -1,0 +1,5 @@
+domain: "liquid_jenkins_build.example.org"
+devel: true
+
+git_repo_versions:
+  setup: git-checkout-versions

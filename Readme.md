@@ -9,6 +9,7 @@ Install Kitchen with the QEMU driver:
 ```shell
 $ sudo apt install -y ruby cloud-utils qemu-kvm genisoimage
 $ sudo gem install test-kitchen kitchen-qemu
+$ sudo apt-get install python3-yaml
 ```
 
 Clone buildbot and prepare a QEMU image:
@@ -18,6 +19,12 @@ $ ./prepare_cloud_image.py
 ```
 
 ### Usage
+
+Download the `setup` repo manually, or by using the `setup_setup` script:
+```shell
+$ ./setup_setup
+```
+
 Run a script from the `shared` folder - it runs as `root` user in the instance:
 ```shell
 $ ./buildbot run shared/scripts/build_odroid_image.sh

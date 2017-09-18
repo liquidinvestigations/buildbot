@@ -1,15 +1,10 @@
+// vim: ft=groovy ts=4 sw=4 et
 stage('Build Image') {
     parallel cloud: {
         node('cloud') {
             checkout scm
             try {
-
-                sh 'git clone https://github.com/liquidinvestigations/setup.git shared/setup'
-                sh '''
-                echo "liquid_domain: liquid.jenkins-build.example.org" > ./shared/setup/ansible/vars/config.yml
-                echo "devel: true" >> ./shared/setup/ansible/vars/config.yml
-                '''
-
+                sh './setup_setup'
                 sh './prepare_cloud_image.py'
                 sh './buildbot run shared/setup/bin/build_image cloud'
 
@@ -25,18 +20,13 @@ stage('Build Image') {
         node('odroid_c2') {
             checkout scm
             try {
-                sh 'git clone https://github.com/liquidinvestigations/setup.git shared/setup'
-                sh '''
-                echo "liquid_domain: liquid.jenkins-build.example.org" > ./shared/setup/ansible/vars/config.yml
-                echo "devel: true" >> ./shared/setup/ansible/vars/config.yml
-                '''
-
+                sh './setup_setup'
                 sh './prepare_cloud_image.py'
                 sh './buildbot run shared/setup/bin/build_image odroid_c2'
             }
             finally {
-                    archive 'shared/ubuntu-odroid_c2-raw.img'
-                    deleteDir()
+                archive 'shared/ubuntu-odroid_c2-raw.img'
+                deleteDir()
             }
         }
     },
