@@ -13,7 +13,12 @@ parallel cloud: {
             sh './buildbot run shared/setup/bin/build_image cloud'
         }
         stage('CLOUD: Archive Raw Image') {
-            archive 'shared/ubuntu-x86_64-raw.img'
+            sh 'xz -1 < shared/ubuntu-x86_64-raw.img > ubuntu-x86_64-raw.img.xz'
+            archive 'shared/ubuntu-x86_64-raw.img.xz'
+        }
+        stage('CLOUD: Create Vagrant box for VirtualBox provider') {
+            sh './buildbot run shared/setup/bin/convert-image.sh'
+            archive 'shared/output/ubuntu-x86_64-vbox.box'
         }
     }
 },
@@ -31,7 +36,8 @@ odroid_c2: {
             sh './buildbot run shared/setup/bin/build_image odroid_c2'
         }
         stage('ODROID C2: Archive Raw Image') {
-            archive 'shared/ubuntu-odroid_c2-raw.img'
+            sh 'xz -1 < shared/ubuntu-odroid_c2-raw.img > ubuntu-odroid_c2-raw.img.xz'
+            archive 'shared/ubuntu-odroid_c2-raw.img.xz'
         }
     }
 }
