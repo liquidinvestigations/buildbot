@@ -19,7 +19,7 @@ def main():
     check_call(['git', 'clone', LIQUID_SETUP_REPO, LIQUID_SETUP_TARGET])
 
     # checkout requested branch
-    check_call(['git', 'checkout', build_config.git_repo_versions.liquid_setup], cwd=LIQUID_SETUP_TARGET)
+    check_call(['git', 'checkout', build_config['git_repo_versions']['setup']], cwd=LIQUID_SETUP_TARGET)
 
     # move config to target
     shutil.copy(BUILD_CONFIG_FILE, LIQUID_SETUP_TARGET + "/ansible/vars/config.yml")
