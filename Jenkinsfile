@@ -2,6 +2,7 @@
 stage('Build Image') {
     parallel cloud: {
         node('cloud') {
+            deleteDir()
             checkout scm
             try {
                 sh './setup_setup'
@@ -18,6 +19,7 @@ stage('Build Image') {
     },
     odroid_c2: {
         node('odroid_c2') {
+            deleteDir()
             checkout scm
             try {
                 sh './setup_setup'
