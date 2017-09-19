@@ -15,11 +15,11 @@ parallel(
             }
             stage('CLOUD: Archive Raw Image') {
                 sh 'xz -1 < shared/ubuntu-x86_64-raw.img > ubuntu-x86_64-raw.img.xz'
-                archive 'shared/ubuntu-x86_64-raw.img.xz'
+                archiveArtifacts 'shared/ubuntu-x86_64-raw.img.xz'
             }
             stage('CLOUD: Create Vagrant box for VirtualBox provider') {
                 sh './buildbot run shared/setup/bin/convert-image.sh'
-                archive 'shared/output/ubuntu-x86_64-vbox.box'
+                archiveArtifacts 'shared/output/ubuntu-x86_64-vbox.box'
             }
         }
     },
@@ -38,7 +38,7 @@ parallel(
             }
             stage('ODROID C2: Archive Raw Image') {
                 sh 'xz -1 < shared/ubuntu-odroid_c2-raw.img > ubuntu-odroid_c2-raw.img.xz'
-                archive 'shared/ubuntu-odroid_c2-raw.img.xz'
+                archiveArtifacts 'shared/ubuntu-odroid_c2-raw.img.xz'
             }
         }
     },
