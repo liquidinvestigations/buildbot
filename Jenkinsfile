@@ -8,13 +8,17 @@ parallel(
                 sh './setup_setup'
             }
             stage('CLOUD: Prepare Cloud Image') {
-                sh './prepare_cloud_image.py cloud-x86_64'
+                sh './prepare_cloud_image.py'
             }
             stage('CLOUD: Build Image') {
-                sh './buildbot cloud-x86_64 run shared/setup/bin/build_image cloud'
+                sh './buildbot run shared/setup/bin/build_image cloud'
+            }
+            stage("CLOUD: Run first boot") {
+                sh 'cp shared/ubuntu-x86_64-raw.img images/liquid-cloud-x86_64/disk.img'
+                sh './buildbot --platform liquid-cloud-x86_64 run shared/setup/bin/wait_first_boot.py'
             }
             stage('CLOUD: Archive Raw Image') {
-                sh 'xz -1 < shared/ubuntu-x86_64-raw.img > ubuntu-x86_64-raw.img.xz'
+                sh 'xz -1 < shared/ubuntu-x86_64-raw.img > shared/ubuntu-x86_64-raw.img.xz'
                 archiveArtifacts 'shared/ubuntu-x86_64-raw.img.xz'
             }
             stage('CLOUD: Create Vagrant box for VirtualBox provider') {
@@ -31,16 +35,16 @@ parallel(
                 sh './setup_setup'
             }
             stage('ODROID C2: Prepare Cloud Image') {
-                sh './prepare_cloud_image.py cloud-arm64'
+                sh './prepare_cloud_image.py'
             }
             stage('ODROID C2: Build Image') {
-                sh './buildbot cloud-arm64 run shared/setup/bin/build_image odroid_c2'
+                sh './buildbot run shared/setup/bin/build_image odroid_c2'
             }
             stage('ODROID C2: Archive Raw Image') {
-                sh 'xz -1 < shared/ubuntu-odroid_c2-raw.img > ubuntu-odroid_c2-raw.img.xz'
+                sh 'xz -1 < shared/ubuntu-odroid_c2-raw.img > shared/ubuntu-odroid_c2-raw.img.xz'
                 archiveArtifacts 'shared/ubuntu-odroid_c2-raw.img.xz'
             }
         }
     },
-    failFast: false
+    failFast: true
 )

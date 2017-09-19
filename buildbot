@@ -25,6 +25,9 @@ def get_vm_name():
 def instance(platform):
     platform_kitchen_yml = IMAGES / platform / 'kitchen.yml'
     assert platform_kitchen_yml.is_file()
+
+    if KITCHEN_YML.exists():
+        KITCHEN_YML.unlink()
     KITCHEN_YML.symlink_to(platform_kitchen_yml)
 
     vm = get_vm_name()
