@@ -5,10 +5,12 @@ Images](https://cloud-images.ubuntu.com). It supports the `x86_64` and
 `aarch64` architectures.
 
 ### Setup
-Install Kitchen with the QEMU driver:
+Install required dependencies (assumes Ubuntu 16.04):
 ```shell
 $ sudo apt install -y ruby cloud-utils qemu-kvm genisoimage
 $ sudo gem install test-kitchen kitchen-qemu
+$ sudo gem install rbnacl -v 4.0.2
+$ sudo gem install rbnacl-libsodium bcrypt_pbkdf
 $ sudo apt-get install python3-yaml
 ```
 
