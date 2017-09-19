@@ -11,8 +11,12 @@ reference:
 """
 
 from pathlib import Path
-from subprocess import check_call, check_output, PIPE
+from subprocess import check_call, check_output
 from argparse import ArgumentParser
+
+def get_arch():
+    return check_output(['uname', '-m']).decode('latin1').strip()
+
 
 CLOUD_INIT_YML = """\
 #cloud-config
@@ -40,7 +44,7 @@ driver:
 platforms:
   - name: {name}
     driver:
-      image_path: ./images
+      image_path: {images}
       image: disk.img
       username: ubuntu
       password: ubuntu
@@ -59,6 +63,7 @@ suites:
         self.disk_img = images / 'disk.img'
 
     def download(self):
+        self.images.mkdir(exist_ok=True)
         if not self.disk_img_orig.is_file():
             check_call([
                 'wget', str(self.base_image_url),
@@ -101,19 +106,23 @@ suites:
         ])
 
     def build(self):
+        self.check_arch(get_arch())
         self.download()
         self.prepare_disk_image()
         self.create_cloud_init_image()
         self.create_kitchen_yml()
         self.run_qemu()
 
-    def create_kitchen_yml(self, name, extra = ()):
+    def create_kitchen_yml(self, name, extra=()):
         extra_fmt = ''
         for l in extra:
             extra_fmt += '      ' + l + '\n'
 
-        with open('.kitchen.yml', 'w') as f:
-            f.write(self.kitchen_yml_template.format(name=name, extra=extra_fmt))
+        kitchen_file = self.images / 'kitchen.yml'
+        with kitchen_file.open('w') as f:
+            f.write(self.kitchen_yml_template.format(name=name,
+                                                     images=str(self.images),
+                                                     extra=extra_fmt))
 
 
 class Builder_x86_64(BaseBuilder):
@@ -137,6 +146,9 @@ class Builder_x86_64(BaseBuilder):
 
     def create_kitchen_yml(self, name='x86_64', extra=()):
         super().create_kitchen_yml(name, extra)
+
+    def check_arch(self, arch):
+        assert arch == 'x86_64'
 
 
 class Builder_arm64(BaseBuilder):
@@ -177,12 +189,15 @@ class Builder_arm64(BaseBuilder):
         ]
 
     def run_qemu(self):
-        check_call(self.qemu_args() + [ '-cpu', 'host', '-enable-kvm' ])
+        check_call(self.qemu_args() + ['-cpu', 'host', '-enable-kvm'])
 
     def create_kitchen_yml(self, name='aarch64', extra=()):
         super().create_kitchen_yml(name,
             ( 'bios: ' + str(self.arm_bios_fd),
               'binary: ./qemu-hacked-arm', ) + extra)
+
+    def check_arch(self, arch):
+        assert arch == 'aarch64'
 
 
 class Builder_emuarm64(Builder_arm64):
@@ -198,31 +213,42 @@ class Builder_emuarm64(Builder_arm64):
             check_call(['wget', str(self.bios_url), '-O', str(self.arm_bios_fd), '-q'])
 
     def run_qemu(self):
-        check_call(self.qemu_args() + [ '-cpu', 'cortex-a53' ])
+        check_call(self.qemu_args() + ['-cpu', 'cortex-a53'])
 
     def create_kitchen_yml(self, name='aarch64', extra=()):
         super().create_kitchen_yml(name,
-            ( 'args: [ cpu: cortex-a53 ]',
-              'kvm: false' ) + extra)
+                    ('args: [cpu: cortex-a53]', 'kvm: false') + extra)
 
+    def check_arch(self, arch):
+        assert arch == 'x86_84'
+
+
+PLATFORMS = {
+    'cloud-x86_64': Builder_x86_64,
+    'cloud-arm64': Builder_arm64,
+    'cloud-emulated-arm64': Builder_emuarm64,
+}
+
+DEFAULTS = {
+    'x86_64': 'cloud-x86_64',
+    'aarch64': 'cloud-arm64',
+}
 
 def main():
-    images = Path(__file__).resolve().parent / 'images'
+    arch = get_arch()
+    if arch in DEFAULTS.keys():
+        default_platform = DEFAULTS[arch]
+    else:
+        raise RuntimeError("Architecture {} not supported.".format(arch))
 
     parser = ArgumentParser()
-    parser.add_argument('--emulate-arm64', action='store_true')
+    parser.add_argument('--platform',
+                        default=default_platform,
+                        choices=PLATFORMS.keys())
     options = parser.parse_args()
 
-    if options.emulate_arm64:
-        builder_cls = Builder_emuarm64
-    else:
-        arch = check_output(['uname', '-m']).decode('latin1').strip()
-        if arch == 'x86_64':
-            builder_cls = Builder_x86_64
-        elif arch == 'aarch64':
-            builder_cls = Builder_arm64
-        else:
-            raise RuntimeError("Can not detect architecture")
+    images = Path(__file__).resolve().parent / 'images' / options.platform
+    builder_cls = PLATFORMS[options.platform]
 
     builder_cls(images).build()
 

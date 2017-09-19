@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 
-import sys
 from pathlib import Path
-from subprocess import run, PIPE
+from subprocess import run, PIPE, check_output
 from contextlib import contextmanager
 from argparse import ArgumentParser
 import shlex
 
 SHARED = Path(__file__).resolve().parent / 'shared'
+IMAGES = Path(__file__).resolve().parent / 'images'
+KITCHEN_YML = Path(__file__).resolve().parent / '.kitchen.yml'
+
+def get_arch():
+    return check_output(['uname', '-m']).decode('latin1').strip()
 
 def echo_run(cmd):
     print('+', *cmd)
@@ -18,7 +22,11 @@ def get_vm_name():
     return process.stdout.decode('latin1').strip()
 
 @contextmanager
-def instance():
+def instance(platform):
+    platform_kitchen_yml = IMAGES / platform / 'kitchen.yml'
+    assert platform_kitchen_yml.is_file()
+    KITCHEN_YML.symlink_to(platform_kitchen_yml)
+
     vm = get_vm_name()
     try:
         echo_run(['kitchen', 'create', vm])
@@ -26,7 +34,7 @@ def instance():
     finally:
         echo_run(['kitchen', 'destroy', vm])
 
-def run_buildbot(*args):
+def run_buildbot(platform, *args):
     parser = ArgumentParser()
     parser.add_argument('script')
     parser.add_argument('args', nargs='*')
@@ -34,33 +42,44 @@ def run_buildbot(*args):
 
     script = Path(options.script).resolve().relative_to(SHARED)
 
-    with instance() as vm:
+    with instance(platform) as vm:
         vm_script = Path('/mnt/shared') / script
         cmd = 'sudo {}'.format(str(vm_script))
         for arg in options.args:
             cmd += ' {}'.format(shlex.quote(arg))
         echo_run(['kitchen', 'exec', vm, '-c', cmd])
 
-def login():
-    with instance() as vm:
+def login(platform):
+    with instance(platform) as vm:
         echo_run(['kitchen', 'login', vm])
-
-def console():
-    vm = get_vm_name()
-    socket_path = '.kitchen/{}.mon'.format(vm)
-    echo_run(['socat', '-,cfmakeraw,escape=0xf', socket_path])
 
 COMMANDS = {
     'run': run_buildbot,
     'login': login,
-    'console': console,
 }
 
+DEFAULTS = {
+    'x86_64': 'cloud-x86_64',
+    'aarch64': 'cloud-arm64',
+}
+
+
 def main():
+    arch = get_arch()
+    if arch in DEFAULTS.keys():
+        default_platform = DEFAULTS[arch]
+    else:
+        raise RuntimeError("Architecture {} not supported.".format(arch))
+
+    platform_list = [x.name for x in IMAGES.iterdir() if x.is_dir()]
+
     parser = ArgumentParser()
+    parser.add_argument('--platform',
+                        choices=platform_list,
+                        default=default_platform)
     parser.add_argument('command', choices=COMMANDS.keys())
     (options, args) = parser.parse_known_args()
-    COMMANDS[options.command](*args)
+    COMMANDS[options.command](options.platform, *args)
 
 if __name__ == '__main__':
     main()

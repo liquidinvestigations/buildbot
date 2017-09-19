@@ -8,10 +8,10 @@ parallel(
                 sh './setup_setup'
             }
             stage('CLOUD: Prepare Cloud Image') {
-                sh './prepare_cloud_image.py'
+                sh './prepare_cloud_image.py cloud-x86_64'
             }
             stage('CLOUD: Build Image') {
-                sh './buildbot run shared/setup/bin/build_image cloud'
+                sh './buildbot cloud-x86_64 run shared/setup/bin/build_image cloud'
             }
             stage('CLOUD: Archive Raw Image') {
                 sh 'xz -1 < shared/ubuntu-x86_64-raw.img > ubuntu-x86_64-raw.img.xz'
@@ -31,10 +31,10 @@ parallel(
                 sh './setup_setup'
             }
             stage('ODROID C2: Prepare Cloud Image') {
-                sh './prepare_cloud_image.py'
+                sh './prepare_cloud_image.py cloud-arm64'
             }
             stage('ODROID C2: Build Image') {
-                sh './buildbot run shared/setup/bin/build_image odroid_c2'
+                sh './buildbot cloud-arm64 run shared/setup/bin/build_image odroid_c2'
             }
             stage('ODROID C2: Archive Raw Image') {
                 sh 'xz -1 < shared/ubuntu-odroid_c2-raw.img > ubuntu-odroid_c2-raw.img.xz'
