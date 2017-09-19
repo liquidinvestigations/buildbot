@@ -24,7 +24,7 @@ $ ./prepare_cloud_image.py
 
 Download the `setup` repo manually, or by using the `setup_setup` script:
 ```shell
-$ ./setup_setup
+$ ./setup_setup # uses configuration from build_config.yml
 ```
 
 Run a script from the `shared` folder - it runs as `root` user in the instance:
