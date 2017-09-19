@@ -11,7 +11,7 @@ reference:
 """
 
 from pathlib import Path
-from subprocess import run, PIPE
+from subprocess import check_call, check_output, PIPE
 from argparse import ArgumentParser
 
 CLOUD_INIT_YML = """\
@@ -60,11 +60,12 @@ suites:
 
     def download(self):
         if not self.disk_img_orig.is_file():
-            run([
+            check_call([
                 'wget', str(self.base_image_url),
                 '-O', str(self.disk_img_dist),
+                '-q'
             ])
-            run([
+            check_call([
                 'qemu-img', 'convert',
                 '-O', 'qcow2',
                 str(self.disk_img_dist),
@@ -75,13 +76,13 @@ suites:
         if self.disk_img.is_file():
             self.disk_img.unlink()
 
-        run([
+        check_call([
             'qemu-img', 'create',
             '-f', 'qcow2',
             '-b', str(self.disk_img_orig),
             str(self.disk_img),
         ])
-        run([
+        check_call([
             'qemu-img', 'resize',
             str(self.disk_img),
             '10G',
@@ -93,7 +94,7 @@ suites:
         with cloud_init_yml.open('w', encoding='utf8') as f:
             f.write(CLOUD_INIT_YML)
 
-        run([
+        check_call([
             'cloud-localds',
             str(self.cloud_init_img),
             str(cloud_init_yml),
@@ -123,7 +124,7 @@ class Builder_x86_64(BaseBuilder):
     )
 
     def run_qemu(self):
-        run([
+        check_call([
             'qemu-system-x86_64',
             '-enable-kvm',
             '-nographic',
@@ -158,7 +159,7 @@ class Builder_arm64(BaseBuilder):
         super().download()
 
         if not self.arm_bios_fd.is_file():
-            run(['wget', str(self.bios_url), '-O', str(self.arm_bios_fd)])
+            check_call(['wget', str(self.bios_url), '-O', str(self.arm_bios_fd), '-q'])
 
     def qemu_args(self):
         return [
@@ -176,7 +177,7 @@ class Builder_arm64(BaseBuilder):
         ]
 
     def run_qemu(self):
-        run(self.qemu_args() + [ '-cpu', 'host', '-enable-kvm' ])
+        check_call(self.qemu_args() + [ '-cpu', 'host', '-enable-kvm' ])
 
     def create_kitchen_yml(self, name='aarch64', extra=()):
         super().create_kitchen_yml(name,
@@ -194,10 +195,10 @@ class Builder_emuarm64(Builder_arm64):
         super().download()
 
         if not self.arm_bios_fd.is_file():
-            run(['wget', str(self.bios_url), '-O', str(self.arm_bios_fd)])
+            check_call(['wget', str(self.bios_url), '-O', str(self.arm_bios_fd), '-q'])
 
     def run_qemu(self):
-        run(self.qemu_args() + [ '-cpu', 'cortex-a53' ])
+        check_call(self.qemu_args() + [ '-cpu', 'cortex-a53' ])
 
     def create_kitchen_yml(self, name='aarch64', extra=()):
         super().create_kitchen_yml(name,
@@ -215,7 +216,7 @@ def main():
     if options.emulate_arm64:
         builder_cls = Builder_emuarm64
     else:
-        arch = run(['uname', '-m'], stdout=PIPE).stdout.decode('latin1').strip()
+        arch = check_output(['uname', '-m']).decode('latin1').strip()
         if arch == 'x86_64':
             builder_cls = Builder_x86_64
         elif arch == 'aarch64':
