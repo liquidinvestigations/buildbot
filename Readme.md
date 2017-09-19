@@ -9,6 +9,8 @@ Install Kitchen with the QEMU driver:
 ```shell
 $ sudo apt install -y ruby cloud-utils qemu-kvm genisoimage
 $ sudo gem install test-kitchen kitchen-qemu
+$ sudo gem install rbnacl -v 4.0.2
+$ sudo gem install rbnacl-libsodium bcrypt_pbkdf
 ```
 
 Clone buildbot and prepare a QEMU image:
