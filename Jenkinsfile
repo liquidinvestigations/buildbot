@@ -42,5 +42,5 @@ parallel(
             }
         }
     },
-    failFast: true
+    failFast: false
 )
