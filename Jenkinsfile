@@ -18,12 +18,16 @@ parallel(
                 sh './buildbot --platform liquid-cloud-x86_64 run shared/setup/bin/wait_first_boot.py'
             }
             stage('CLOUD: Archive Raw Image') {
-                sh 'xz -1 < shared/ubuntu-x86_64-raw.img > shared/ubuntu-x86_64-raw.img.xz'
-                archiveArtifacts 'shared/ubuntu-x86_64-raw.img.xz'
+                // The archiveArtifacts command keeps the relative path of the
+                // file as the filename. To avoid this issue, we move all
+                // binaries that will be archived to the workspace root.
+                sh 'xz -1 < shared/ubuntu-x86_64-raw.img > liquid-cloud-x86_64-raw.img.xz'
+                archiveArtifacts 'liquid-cloud-x86_64-raw.img.xz'
             }
             stage('CLOUD: Create Vagrant box for VirtualBox provider') {
                 sh './buildbot run shared/setup/bin/convert-image.sh'
-                archiveArtifacts 'shared/output/ubuntu-x86_64-vbox.box'
+                sh 'mv shared/output/ubuntu-x86_64-vbox.box liquid-cloud-x86_64-vbox.box'
+                archiveArtifacts 'liquid-cloud-x86_64-vbox.box'
             }
         }
     },
@@ -41,8 +45,8 @@ parallel(
                 sh './buildbot run shared/setup/bin/build_image odroid_c2'
             }
             stage('ODROID C2: Archive Raw Image') {
-                sh 'xz -1 < shared/ubuntu-odroid_c2-raw.img > shared/ubuntu-odroid_c2-raw.img.xz'
-                archiveArtifacts 'shared/ubuntu-odroid_c2-raw.img.xz'
+                sh 'xz -1 < shared/ubuntu-odroid_c2-raw.img > liquid-odroid_c2-arm64-raw.img.xz'
+                archiveArtifacts 'liquid-odroid_c2-arm64-raw.img.xz'
             }
         }
     },
