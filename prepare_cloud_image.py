@@ -181,7 +181,7 @@ class Builder_arm64(BaseBuilder):
             '-machine', 'virt',
             '-bios', str(self.arm_bios_fd),
             '-netdev', 'user,id=user',
-            '-device', 'virtio-net-pci,netdev=user',
+            '-device', 'virtio-net-pci,netdev=user,romfile=',
             '-device', 'virtio-blk-device,drive=image',
             '-drive', 'if=none,id=image,file=' + str(self.disk_img),
             '-device', 'virtio-blk-device,drive=cloud-init',
