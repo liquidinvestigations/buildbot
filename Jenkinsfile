@@ -32,7 +32,7 @@ parallel(
         }
     },
     odroid_c2: {
-        node('odroid_c2') {
+        node('arm64') {
             deleteDir()
             checkout scm
             stage('ODROID C2: Setup the setup repo') {
