@@ -140,8 +140,8 @@ class Builder_x86_64(BaseBuilder):
             '-m', '512',
             '-netdev', 'user,id=user',
             '-device', 'virtio-net-pci,netdev=user',
-            '-hda', str(self.disk_img),
-            '-hdb', str(self.cloud_init_img),
+            '-drive', 'index=0,media=disk,file=' + str(self.disk_img),
+            '-drive', 'index=1,media=disk,format=raw,file=' + str(self.cloud_init_img),
         ])
 
     def create_kitchen_yml(self, name='x86_64', extra=()):
@@ -185,7 +185,7 @@ class Builder_arm64(BaseBuilder):
             '-device', 'virtio-blk-device,drive=image',
             '-drive', 'if=none,id=image,file=' + str(self.disk_img),
             '-device', 'virtio-blk-device,drive=cloud-init',
-            '-drive', 'if=none,id=cloud-init,file=' + str(self.cloud_init_img),
+            '-drive', 'if=none,id=cloud-init,format=raw,file=' + str(self.cloud_init_img),
         ]
 
     def run_qemu(self):
