@@ -10,7 +10,9 @@ reference:
 * http://ubuntu-smoser.blogspot.ro/2013/02/using-ubuntu-cloud-images-without-cloud.html
 """
 
+import json
 from pathlib import Path
+import shutil
 from subprocess import check_call, check_output
 from argparse import ArgumentParser
 
@@ -36,25 +38,6 @@ runcmd:
 class BaseBuilder:
 
     base_image_url = None
-
-    kitchen_yml_template = """\
-driver:
-  name: qemu
-
-platforms:
-  - name: {name}
-    driver:
-      image_path: {images}
-      image: disk.img
-      username: ubuntu
-      password: ubuntu
-      hostshares:
-        - path: shared
-          mountpoint: /mnt/shared
-{extra}
-suites:
-  - name: vm
-"""
 
     def __init__(self, images):
         self.images = images
@@ -110,19 +93,13 @@ suites:
         self.download()
         self.prepare_disk_image()
         self.create_cloud_init_image()
-        self.create_kitchen_yml()
+        self.create_options_json()
         self.run_qemu()
 
-    def create_kitchen_yml(self, name, extra=()):
-        extra_fmt = ''
-        for l in extra:
-            extra_fmt += '      ' + l + '\n'
-
-        kitchen_file = self.images / 'kitchen.yml'
-        with kitchen_file.open('w') as f:
-            f.write(self.kitchen_yml_template.format(name=name,
-                                                     images=str(self.images),
-                                                     extra=extra_fmt))
+    def create_options_json(self):
+        options = self.get_options()
+        with (self.images / 'options.json').open('w', encoding='utf8') as f:
+            print(json.dumps(options, indent=2), file=f)
 
 
 class Builder_x86_64(BaseBuilder):
@@ -144,8 +121,8 @@ class Builder_x86_64(BaseBuilder):
             '-drive', 'index=1,media=disk,format=raw,file=' + str(self.cloud_init_img),
         ])
 
-    def create_kitchen_yml(self, name='x86_64', extra=()):
-        super().create_kitchen_yml(name, extra)
+    def get_options(self):
+        return {}
 
     def check_arch(self, arch):
         assert arch == 'x86_64'
@@ -191,10 +168,10 @@ class Builder_arm64(BaseBuilder):
     def run_qemu(self):
         check_call(self.qemu_args() + ['-cpu', 'host', '-enable-kvm'])
 
-    def create_kitchen_yml(self, name='aarch64', extra=()):
-        super().create_kitchen_yml(name,
-            ( 'bios: ' + str(self.arm_bios_fd),
-              'binary: ./qemu-hacked-arm', ) + extra)
+    def get_options(self):
+        return {
+            'native-arm': True,
+        }
 
     def check_arch(self, arch):
         assert arch == 'aarch64'
@@ -215,9 +192,10 @@ class Builder_emuarm64(Builder_arm64):
     def run_qemu(self):
         check_call(self.qemu_args() + ['-cpu', 'cortex-a53'])
 
-    def create_kitchen_yml(self, name='aarch64', extra=()):
-        super().create_kitchen_yml(name,
-                    ('args: [cpu: cortex-a53]', 'kvm: false') + extra)
+    def get_options(self):
+        return {
+            'emulate-arm': True,
+        }
 
     def check_arch(self, arch):
         assert arch == 'x86_84'
@@ -251,7 +229,12 @@ def main():
     print("Preparing buildbot image for", options.platform)
     builder_cls = PLATFORMS[options.platform]
 
-    builder_cls(images).build()
+    images.mkdir()
+    try:
+        builder_cls(images).build()
+    except:
+        shutil.rmtree(str(images))
+        raise
 
 
 if __name__ == '__main__':

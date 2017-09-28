@@ -1,14 +1,38 @@
 #!/usr/bin/env python3
 
+import os
+import json
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from subprocess import run, PIPE, check_output
 from contextlib import contextmanager
 from argparse import ArgumentParser
 import shlex
 
-SHARED = Path(__file__).resolve().parent / 'shared'
-IMAGES = Path(__file__).resolve().parent / 'images'
-KITCHEN_YML = Path(__file__).resolve().parent / '.kitchen.yml'
+repo = Path(__file__).resolve().parent
+SHARED = repo / 'shared'
+IMAGES = repo / 'images'
+VAR = repo / 'var'
+QEMU_HACKED_ARM = repo / 'qemu-hacked-arm'
+
+KITCHEN_YML_TEMPLATE = """\
+driver:
+  name: qemu
+
+platforms:
+  - name: buildbot
+    driver:
+      image: {image}
+      username: ubuntu
+      password: ubuntu
+      hostshares:
+        - path: {shared}
+          mountpoint: /mnt/shared
+{extra}
+suites:
+  - name: vm
+"""
+
 
 def get_arch():
     return check_output(['uname', '-m']).decode('latin1').strip()
@@ -17,25 +41,52 @@ def echo_run(cmd):
     print('+', *cmd)
     run(cmd, check=True)
 
-def get_vm_name():
-    process = run(['kitchen', 'list', '--bare'], stdout=PIPE, check=True)
-    return process.stdout.decode('latin1').strip()
+@contextmanager
+def cd(path):
+    prev = os.getcwd()
+    os.chdir(str(path))
+    try:
+        yield
+    finally:
+        os.chdir(prev)
 
 @contextmanager
 def instance(platform):
-    platform_kitchen_yml = IMAGES / platform / 'kitchen.yml'
-    assert platform_kitchen_yml.is_file()
+    platform_home = IMAGES / platform
 
-    if KITCHEN_YML.exists():
-        KITCHEN_YML.unlink()
-    KITCHEN_YML.symlink_to(platform_kitchen_yml)
+    with (platform_home / 'options.json').open(encoding='utf8') as f:
+        options = json.load(f)
 
-    vm = get_vm_name()
-    try:
-        echo_run(['kitchen', 'create', vm])
-        yield vm
-    finally:
-        echo_run(['kitchen', 'destroy', vm])
+    extra_fmt = ''
+
+    if options.get('native-arm'):
+        extra_fmt += '      bios: {}\n'.format(platform_home / 'arm-bios.fd')
+        extra_fmt += '      binary: {}\n'.format(QEMU_HACKED_ARM)
+
+    elif options.get('emulate-arm'):
+        extra_fmt += '      args: [cpu: cortex-a53]\n'
+        extra_fmt += '      kvm: false\n'
+
+    vars = {
+        'image': platform_home / 'disk.img',
+        'shared': SHARED,
+        'extra': extra_fmt,
+    }
+
+    if not VAR.is_dir():
+        VAR.mkdir()
+
+    with TemporaryDirectory(prefix='kitchen-', dir=str(VAR)) as tmp_name:
+        tmp = Path(tmp_name)
+        with (tmp / '.kitchen.yml').open('w', encoding='utf8') as kitchen_yml:
+            kitchen_yml.write(KITCHEN_YML_TEMPLATE.format(**vars))
+
+        with cd(tmp):
+            try:
+                echo_run(['kitchen', 'create'])
+                yield
+            finally:
+                echo_run(['kitchen', 'destroy'])
 
 def run_buildbot(platform, *args):
     parser = ArgumentParser()
@@ -45,16 +96,16 @@ def run_buildbot(platform, *args):
 
     script = Path(options.script).resolve().relative_to(SHARED)
 
-    with instance(platform) as vm:
+    with instance(platform):
         vm_script = Path('/mnt/shared') / script
         cmd = 'sudo {}'.format(str(vm_script))
         for arg in options.args:
             cmd += ' {}'.format(shlex.quote(arg))
-        echo_run(['kitchen', 'exec', vm, '-c', cmd])
+        echo_run(['kitchen', 'exec', '-c', cmd])
 
 def login(platform):
-    with instance(platform) as vm:
-        echo_run(['kitchen', 'login', vm])
+    with instance(platform):
+        echo_run(['kitchen', 'login'])
 
 COMMANDS = {
     'run': run_buildbot,
