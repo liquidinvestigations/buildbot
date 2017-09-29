@@ -89,17 +89,10 @@ class BaseBuilder:
         ])
 
     def build(self):
-        self.check_arch(get_arch())
         self.download()
         self.prepare_disk_image()
         self.create_cloud_init_image()
-        self.create_options_json()
         self.run_qemu()
-
-    def create_options_json(self):
-        options = self.get_options()
-        with (self.images / 'options.json').open('w', encoding='utf8') as f:
-            print(json.dumps(options, indent=2), file=f)
 
 
 class Builder_x86_64(BaseBuilder):
@@ -120,12 +113,6 @@ class Builder_x86_64(BaseBuilder):
             '-drive', 'index=0,media=disk,file=' + str(self.disk_img),
             '-drive', 'index=1,media=disk,format=raw,file=' + str(self.cloud_init_img),
         ])
-
-    def get_options(self):
-        return {}
-
-    def check_arch(self, arch):
-        assert arch == 'x86_64'
 
 
 class Builder_arm64(BaseBuilder):
@@ -168,43 +155,10 @@ class Builder_arm64(BaseBuilder):
     def run_qemu(self):
         check_call(self.qemu_args() + ['-cpu', 'host', '-enable-kvm'])
 
-    def get_options(self):
-        return {
-            'native-arm': True,
-        }
-
-    def check_arch(self, arch):
-        assert arch == 'aarch64'
-
-
-class Builder_emuarm64(Builder_arm64):
-
-    def __init__(self, images):
-        super().__init__(images)
-        self.arm_bios_fd = images / 'arm-bios.fd'
-
-    def download(self):
-        super().download()
-
-        if not self.arm_bios_fd.is_file():
-            check_call(['wget', str(self.bios_url), '-O', str(self.arm_bios_fd), '-q'])
-
-    def run_qemu(self):
-        check_call(self.qemu_args() + ['-cpu', 'cortex-a53'])
-
-    def get_options(self):
-        return {
-            'emulate-arm': True,
-        }
-
-    def check_arch(self, arch):
-        assert arch == 'x86_84'
-
 
 PLATFORMS = {
     'cloud-x86_64': Builder_x86_64,
     'cloud-arm64': Builder_arm64,
-    'cloud-emulated-arm64': Builder_emuarm64,
 }
 
 DEFAULTS = {

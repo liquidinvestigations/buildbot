@@ -3,8 +3,7 @@
 An automated build environment that uses [Kitchen](http://kitchen.ci) and QEMU
 to create virtual machines based on [Ubuntu Cloud
 Images](https://cloud-images.ubuntu.com). It supports the `x86_64` and
-`aarch64` architectures. The `aarch64` architecture can also be emulated
-on `x86_64` build machines.
+`aarch64` architectures.
 
 The build environment can also run VMs that it produces, to facilitate testing.
 
@@ -22,13 +21,11 @@ Clone factory and prepare a QEMU image for your chosen platform:
 ```shell
 $ git clone https://github.com/liquidinvestigations/factory.git
 $ ./prepare_cloud_image.py --platform cloud-x86_64
-$ ./prepare_cloud_image.py --platform emulated-cloud-arm64
 ```
 
 Available platforms for `prepare_cloud_image.py`:
 - `cloud-x86_64` (available only on `x86_64` hosts)
 - `cloud-arm64` (available only on `aarch64` hosts)
-- `emulated-cloud-arm64` (available only on `x86_64` hosts)
 
 
 ### Usage
@@ -42,7 +39,7 @@ $ ./setup_setup
 
 Run a script from the `shared` folder - it runs as `root` user in the instance:
 ```shell
-$ ./factory --platform emulated-cloud-arm64 run --share shared:/mnt/shared /mnt/shared/scripts/build_odroid_image.sh
+$ ./factory --platform cloud-arm64 run --share shared:/mnt/shared /mnt/shared/scripts/build_odroid_image.sh
 ```
 
 Log into an ephemeral machine:
