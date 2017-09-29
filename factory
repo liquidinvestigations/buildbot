@@ -15,24 +15,6 @@ IMAGES = repo / 'images'
 VAR = repo / 'var'
 QEMU_HACKED_ARM = repo / 'qemu-hacked-arm'
 
-KITCHEN_YML_TEMPLATE = """\
-driver:
-  name: qemu
-
-platforms:
-  - name: factory
-    driver:
-      image: {image}
-      username: ubuntu
-      password: ubuntu
-      hostshares:
-        - path: {shared}
-          mountpoint: /mnt/shared
-{extra}
-suites:
-  - name: vm
-"""
-
 
 def get_arch():
     return check_output(['uname', '-m']).decode('latin1').strip()
@@ -57,20 +39,33 @@ def instance(platform):
     with (platform_home / 'options.json').open(encoding='utf8') as f:
         options = json.load(f)
 
-    extra_fmt = ''
+    shared = {
+        'path': str(SHARED),
+        'mountpoint': '/mnt/shared',
+    }
+
+    platform = {
+        'name': 'factory',
+        'driver': {
+            'image': str(platform_home / 'disk.img'),
+            'username': 'ubuntu',
+            'password': 'ubuntu',
+            'hostshares': [shared],
+        },
+    }
 
     if options.get('native-arm'):
-        extra_fmt += '      bios: {}\n'.format(platform_home / 'arm-bios.fd')
-        extra_fmt += '      binary: {}\n'.format(QEMU_HACKED_ARM)
+        platform['driver']['bios'] = str(platform_home / 'arm-bios.fd')
+        platform['driver']['binary'] = str(QEMU_HACKED_ARM)
 
     elif options.get('emulate-arm'):
-        extra_fmt += '      args: [cpu: cortex-a53]\n'
-        extra_fmt += '      kvm: false\n'
+        platform['driver']['args'] = [{'cpu': 'cortex-a53'}]
+        platform['driver']['kvm'] = False
 
-    vars = {
-        'image': platform_home / 'disk.img',
-        'shared': SHARED,
-        'extra': extra_fmt,
+    kitchen_yml = {
+        'driver': {'name': 'qemu'},
+        'platforms': [platform],
+        'suites': [{'name': 'vm'}],
     }
 
     if not VAR.is_dir():
@@ -78,8 +73,8 @@ def instance(platform):
 
     with TemporaryDirectory(prefix='kitchen-', dir=str(VAR)) as tmp_name:
         tmp = Path(tmp_name)
-        with (tmp / '.kitchen.yml').open('w', encoding='utf8') as kitchen_yml:
-            kitchen_yml.write(KITCHEN_YML_TEMPLATE.format(**vars))
+        with (tmp / '.kitchen.yml').open('w', encoding='utf8') as f:
+            print(json.dumps(kitchen_yml, indent=2), file=f)
 
         with cd(tmp):
             try:
