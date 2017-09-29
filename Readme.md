@@ -42,7 +42,7 @@ $ ./setup_setup
 
 Run a script from the `shared` folder - it runs as `root` user in the instance:
 ```shell
-$ ./factory --platform emulated-cloud-arm64 run shared/scripts/build_odroid_image.sh
+$ ./factory --platform emulated-cloud-arm64 run --share shared:/mnt/shared /mnt/shared/scripts/build_odroid_image.sh
 ```
 
 Log into an ephemeral machine:
