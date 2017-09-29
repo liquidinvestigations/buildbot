@@ -96,7 +96,7 @@ def run_factory(platform, *args):
         cmd = ' '.join(shlex.quote(a) for a in args)
         echo_run(['kitchen', 'exec', '-c', cmd])
 
-def login(platform):
+def login(platform, *args):
     parser = ArgumentParser()
     parser.add_argument('--share', action='append', default=[])
     options = parser.parse_args(args)
