@@ -45,6 +45,13 @@ def cd(path):
 def instance(platform, shares, memory):
     platform_home = IMAGES / platform
 
+    config_json = platform_home / 'config.json'
+    if config_json.is_file():
+        with config_json.open(encoding='utf8') as f:
+            config = json.load(f)
+    else:
+        config = {}
+
     if not VAR.is_dir():
         VAR.mkdir()
 
@@ -66,13 +73,18 @@ def instance(platform, shares, memory):
             str(local_disk),
         ])
 
+        login = config.get('login', {
+            'username': 'ubuntu',
+            'password': 'ubuntu',
+        })
+
         platform = {
             'name': 'factory',
             'driver': {
                 'image': [{'file': str(local_disk), 'snapshot': 'off'}],
                 'memory': memory,
-                'username': 'ubuntu',
-                'password': 'ubuntu',
+                'username': login['username'],
+                'password': login['password'],
                 'hostshares': [_share(s) for s in shares],
             },
         }
