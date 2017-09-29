@@ -11,7 +11,7 @@ The build environment can also run VMs that it produces, to facilitate testing.
 
 Install required dependencies (assumes Ubuntu 16.04):
 ```shell
-$ sudo apt install -y wget ruby ruby-dev build-essential cloud-utils qemu-kvm genisoimage python3-yaml
+$ sudo apt install -y wget ruby ruby-dev build-essential cloud-utils qemu-kvm genisoimage
 $ sudo gem install test-kitchen kitchen-qemu
 $ sudo gem install rbnacl -v 4.0.2
 $ sudo gem install rbnacl-libsodium bcrypt_pbkdf
