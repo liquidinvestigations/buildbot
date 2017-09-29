@@ -36,9 +36,6 @@ def cd(path):
 def instance(platform, shares):
     platform_home = IMAGES / platform
 
-    with (platform_home / 'options.json').open(encoding='utf8') as f:
-        options = json.load(f)
-
     def _share(s):
         (path, mountpoint) = s.split(':')
         return {
@@ -56,13 +53,9 @@ def instance(platform, shares):
         },
     }
 
-    if options.get('native-arm'):
+    if get_arch() == 'aarch64':
         platform['driver']['bios'] = str(platform_home / 'arm-bios.fd')
         platform['driver']['binary'] = str(QEMU_HACKED_ARM)
-
-    elif options.get('emulate-arm'):
-        platform['driver']['args'] = [{'cpu': 'cortex-a53'}]
-        platform['driver']['kvm'] = False
 
     kitchen_yml = {
         'driver': {'name': 'qemu'},
