@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from subprocess import run, PIPE, check_output
 from contextlib import contextmanager
-from argparse import ArgumentParser
+from argparse import ArgumentParser, REMAINDER
 import shlex
 
 repo = Path(__file__).resolve().parent
@@ -33,16 +33,18 @@ def cd(path):
         os.chdir(prev)
 
 @contextmanager
-def instance(platform):
+def instance(platform, shares):
     platform_home = IMAGES / platform
 
     with (platform_home / 'options.json').open(encoding='utf8') as f:
         options = json.load(f)
 
-    shared = {
-        'path': str(SHARED),
-        'mountpoint': '/mnt/shared',
-    }
+    def _share(s):
+        (path, mountpoint) = s.split(':')
+        return {
+            'path': str(Path(path).resolve()),
+            'mountpoint': mountpoint,
+        }
 
     platform = {
         'name': 'factory',
@@ -50,7 +52,7 @@ def instance(platform):
             'image': str(platform_home / 'disk.img'),
             'username': 'ubuntu',
             'password': 'ubuntu',
-            'hostshares': [shared],
+            'hostshares': [_share(s) for s in shares],
         },
     }
 
@@ -85,21 +87,20 @@ def instance(platform):
 
 def run_factory(platform, *args):
     parser = ArgumentParser()
-    parser.add_argument('script')
-    parser.add_argument('args', nargs='*')
+    parser.add_argument('--share', action='append', default=[])
+    parser.add_argument('args', nargs=REMAINDER)
     options = parser.parse_args(args)
 
-    script = Path(options.script).resolve().relative_to(SHARED)
-
-    with instance(platform):
-        vm_script = Path('/mnt/shared') / script
-        cmd = 'sudo {}'.format(str(vm_script))
-        for arg in options.args:
-            cmd += ' {}'.format(shlex.quote(arg))
+    with instance(platform, options.share):
+        args = ['sudo'] + options.args
+        cmd = ' '.join(shlex.quote(a) for a in args)
         echo_run(['kitchen', 'exec', '-c', cmd])
 
 def login(platform):
-    with instance(platform):
+    parser = ArgumentParser()
+    parser.add_argument('--share', action='append', default=[])
+    options = parser.parse_args(args)
+    with instance(platform, options.share):
         echo_run(['kitchen', 'login'])
 
 COMMANDS = {
