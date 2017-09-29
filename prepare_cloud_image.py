@@ -226,7 +226,7 @@ def main():
     options = parser.parse_args()
 
     images = Path(__file__).resolve().parent / 'images' / options.platform
-    print("Preparing buildbot image for", options.platform)
+    print("Preparing factory image for", options.platform)
     builder_cls = PLATFORMS[options.platform]
 
     images.mkdir()

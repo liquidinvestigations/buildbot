@@ -20,7 +20,7 @@ driver:
   name: qemu
 
 platforms:
-  - name: buildbot
+  - name: factory
     driver:
       image: {image}
       username: ubuntu
@@ -88,7 +88,7 @@ def instance(platform):
             finally:
                 echo_run(['kitchen', 'destroy'])
 
-def run_buildbot(platform, *args):
+def run_factory(platform, *args):
     parser = ArgumentParser()
     parser.add_argument('script')
     parser.add_argument('args', nargs='*')
@@ -108,7 +108,7 @@ def login(platform):
         echo_run(['kitchen', 'login'])
 
 COMMANDS = {
-    'run': run_buildbot,
+    'run': run_factory,
     'login': login,
 }
 
