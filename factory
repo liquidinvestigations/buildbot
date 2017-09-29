@@ -45,39 +45,48 @@ def cd(path):
 def instance(platform, shares, memory):
     platform_home = IMAGES / platform
 
-    def _share(s):
-        (path, mountpoint) = s.split(':')
-        return {
-            'path': str(Path(path).resolve()),
-            'mountpoint': mountpoint,
-        }
-
-    platform = {
-        'name': 'factory',
-        'driver': {
-            'image': str(platform_home / 'disk.img'),
-            'memory': memory,
-            'username': 'ubuntu',
-            'password': 'ubuntu',
-            'hostshares': [_share(s) for s in shares],
-        },
-    }
-
-    if get_arch() == 'aarch64':
-        platform['driver']['bios'] = str(platform_home / 'arm-bios.fd')
-        platform['driver']['binary'] = str(QEMU_HACKED_ARM)
-
-    kitchen_yml = {
-        'driver': {'name': 'qemu'},
-        'platforms': [platform],
-        'suites': [{'name': 'vm'}],
-    }
-
     if not VAR.is_dir():
         VAR.mkdir()
 
     with TemporaryDirectory(prefix='kitchen-', dir=str(VAR)) as tmp_name:
         tmp = Path(tmp_name)
+
+        def _share(s):
+            (path, mountpoint) = s.split(':')
+            return {
+                'path': str(Path(path).resolve()),
+                'mountpoint': mountpoint,
+            }
+
+        local_disk = tmp / 'local-disk.img'
+        check_call([
+            'qemu-img', 'create',
+            '-f', 'qcow2',
+            '-b', str(platform_home / 'disk.img'),
+            str(local_disk),
+        ])
+
+        platform = {
+            'name': 'factory',
+            'driver': {
+                'image': [{'file': str(local_disk), 'snapshot': 'off'}],
+                'memory': memory,
+                'username': 'ubuntu',
+                'password': 'ubuntu',
+                'hostshares': [_share(s) for s in shares],
+            },
+        }
+
+        if get_arch() == 'aarch64':
+            platform['driver']['bios'] = str(platform_home / 'arm-bios.fd')
+            platform['driver']['binary'] = str(QEMU_HACKED_ARM)
+
+        kitchen_yml = {
+            'driver': {'name': 'qemu'},
+            'platforms': [platform],
+            'suites': [{'name': 'vm'}],
+        }
+
         with (tmp / '.kitchen.yml').open('w', encoding='utf8') as f:
             print(json.dumps(kitchen_yml, indent=2), file=f)
 
