@@ -20,7 +20,7 @@ $ sudo gem install rbnacl-libsodium bcrypt_pbkdf
 Clone factory and prepare a QEMU image for your chosen platform:
 ```shell
 $ git clone https://github.com/liquidinvestigations/factory.git
-$ ./prepare_cloud_image.py --platform cloud-x86_64
+$ ./factory prepare-cloud-image --platform cloud-x86_64
 ```
 
 Available platforms for `prepare_cloud_image.py`:
