@@ -42,7 +42,7 @@ def cd(path):
         os.chdir(prev)
 
 @contextmanager
-def instance(platform, shares):
+def instance(platform, shares, memory):
     platform_home = IMAGES / platform
 
     def _share(s):
@@ -56,6 +56,7 @@ def instance(platform, shares):
         'name': 'factory',
         'driver': {
             'image': str(platform_home / 'disk.img'),
+            'memory': memory,
             'username': 'ubuntu',
             'password': 'ubuntu',
             'hostshares': [_share(s) for s in shares],
@@ -90,10 +91,11 @@ def instance(platform, shares):
 def run_factory(platform, *args):
     parser = ArgumentParser()
     parser.add_argument('--share', action='append', default=[])
+    parser.add_argument('-m', '--memory', default=512, type=int)
     parser.add_argument('args', nargs=REMAINDER)
     options = parser.parse_args(args)
 
-    with instance(platform, options.share):
+    with instance(platform, options.share, options.memory):
         args = ['sudo'] + options.args
         cmd = ' '.join(shlex.quote(a) for a in args)
         echo_run(['kitchen', 'exec', '-c', cmd])
@@ -101,8 +103,9 @@ def run_factory(platform, *args):
 def login(platform, *args):
     parser = ArgumentParser()
     parser.add_argument('--share', action='append', default=[])
+    parser.add_argument('-m', '--memory', default=512, type=int)
     options = parser.parse_args(args)
-    with instance(platform, options.share):
+    with instance(platform, options.share, options.memory):
         echo_run(['kitchen', 'login'])
 
 CLOUD_INIT_YML = """\
