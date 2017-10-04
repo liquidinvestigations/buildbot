@@ -17,7 +17,7 @@ parallel(
             checkout scm
             stage('ODROID C2: Build a Factory') {
                 sh './factory prepare-cloud-image'
-                sh 'tar c -C images cloud-arm64 | xz > cloud-arm64-image.tar.xz'
+                sh 'tar c -C images cloud-arm64 | xz -0 > cloud-arm64-image.tar.xz'
                 archiveArtifacts 'cloud-arm64-image.tar.xz'
             }
         }
