@@ -105,10 +105,15 @@ def instance(platform, shares, memory, smp):
 
         with cd(tmp):
             try:
-                echo_run(['kitchen', 'create'])
-                yield
-            finally:
-                echo_run(['kitchen', 'destroy'])
+                try:
+                    echo_run(['kitchen', 'create'])
+                    yield
+                finally:
+                    echo_run(['kitchen', 'destroy'])
+            except:
+                echo_run(['cat', '.kitchen/logs/kitchen.log'])
+                echo_run(['cat', '.kitchen/logs/vm-factory.log'])
+                raise
 
 def run_factory(platform, *args):
     parser = ArgumentParser()
