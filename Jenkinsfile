@@ -6,7 +6,7 @@ parallel(
             checkout scm
             stage('CLOUD: Build a Factory') {
                 sh './factory prepare-cloud-image'
-                sh 'cd images/cloud-x86_64 && tar c * | xz > ../../cloud-x86_64-image.tar.xz'
+                sh 'cd images/cloud-x86_64 && tar c * | xz -0 > ../../cloud-x86_64-image.tar.xz'
                 archiveArtifacts 'cloud-x86_64-image.tar.xz'
             }
         }
