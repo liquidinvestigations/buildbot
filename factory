@@ -44,7 +44,7 @@ def cd(path):
 
 def kill_qemu_via_qmp(qmp_path):
     qmp = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    qmp.connect(str(qmp_path))
+    qmp.connect(qmp_path)
     # https://wiki.qemu.org/Documentation/QMP
     qmp.sendall(b'{"execute": "qmp_capabilities"}\n')
     qmp.sendall(b'{"execute": "quit"}\n')
@@ -118,7 +118,7 @@ def instance(platform, shares, memory, smp):
                     echo_run(['kitchen', 'create'])
                     yield
                 finally:
-                    kill_qemu_via_qmp(tmp / '.kitchen/vm-factory.qmp')
+                    kill_qemu_via_qmp('.kitchen/vm-factory.qmp')
 
             except:
                 echo_run(['cat', '.kitchen/logs/kitchen.log'])
