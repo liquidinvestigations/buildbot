@@ -3,6 +3,7 @@
 import os
 import json
 from pathlib import Path
+import socket
 import shutil
 from tempfile import TemporaryDirectory
 from subprocess import run, PIPE, check_call, check_output
@@ -109,7 +110,13 @@ def instance(platform, shares, memory, smp):
                     echo_run(['kitchen', 'create'])
                     yield
                 finally:
-                    echo_run(['kitchen', 'destroy'])
+                    qmp = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    qmp.connect(str(tmp / '.kitchen/vm-factory.qmp'))
+                    # https://wiki.qemu.org/Documentation/QMP
+                    qmp.sendall(b'{"execute": "qmp_capabilities"}\n')
+                    qmp.sendall(b'{"execute": "quit"}\n')
+                    qmp.close()
+
             except:
                 echo_run(['cat', '.kitchen/logs/kitchen.log'])
                 echo_run(['cat', '.kitchen/logs/vm-factory.log'])
