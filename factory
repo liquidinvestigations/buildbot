@@ -6,7 +6,7 @@ from pathlib import Path
 import socket
 import shutil
 from tempfile import TemporaryDirectory
-from subprocess import run, PIPE, check_call, check_output
+from subprocess import run, check_output
 from contextlib import contextmanager
 from argparse import ArgumentParser, REMAINDER
 import shlex
@@ -18,6 +18,9 @@ reference:
 * https://help.ubuntu.com/community/UEC/Images#Ubuntu_Cloud_Guest_images_on_12.04_LTS_.28Precise.29_and_beyond_using_NoCloud
 * http://ubuntu-smoser.blogspot.ro/2013/02/using-ubuntu-cloud-images-without-cloud.html
 """
+
+DB_ROOT = Path.home() / '.factory'
+DB_ROOT.mkdir(exist_ok=True)
 
 repo = Path(__file__).resolve().parent
 SHARED = repo / 'shared'
@@ -75,7 +78,7 @@ def instance(platform, shares, memory, smp):
             }
 
         local_disk = tmp / 'local-disk.img'
-        check_call([
+        echo_run([
             'qemu-img', 'create',
             '-f', 'qcow2',
             '-b', str(platform_home / 'disk.img'),
@@ -162,82 +165,71 @@ runcmd:
   - "poweroff"
 """
 
+def download_if_missing(path, url):
+    if not path.is_file():
+        echo_run(['wget', url, '-O', str(path), '-q'])
+
 class BaseBuilder:
 
-    base_image_url = None
-
-    def __init__(self, images):
-        self.images = images
-        self.disk_img_orig = images / 'disk.img.orig'
-        self.disk_img_dist = images / 'disk.img.dist'
-        self.disk_img = images / 'disk.img'
+    def __init__(self, workbench):
+        self.workbench = workbench
+        self.db = DB_ROOT / self.name
+        self.db.mkdir(exist_ok=True)
+        self.disk = self.workbench / 'disk.img'
+        upstream_image_name = self.upstream_image_url.rsplit('/', 1)[-1]
+        self.upstream_image = self.db / upstream_image_name
 
     def download(self):
-        self.images.mkdir(exist_ok=True)
-        if not self.disk_img_orig.is_file():
-            check_call([
-                'wget', str(self.base_image_url),
-                '-O', str(self.disk_img_dist),
-                '-q'
-            ])
-            check_call([
-                'qemu-img', 'convert',
-                '-O', 'qcow2',
-                str(self.disk_img_dist),
-                str(self.disk_img_orig),
-            ])
+        download_if_missing(self.upstream_image, self.upstream_image_url)
 
-    def prepare_disk_image(self):
-        if self.disk_img.is_file():
-            self.disk_img.unlink()
+    def unpack_upstream(self):
+        echo_run(['qemu-img', 'convert', '-O', 'qcow2',
+                    str(self.upstream_image), str(self.disk)])
 
-        check_call([
-            'qemu-img', 'create',
-            '-f', 'qcow2',
-            '-b', str(self.disk_img_orig),
-            str(self.disk_img),
-        ])
-        check_call([
-            'qemu-img', 'resize',
-            str(self.disk_img),
-            '10G',
-        ])
+        echo_run(['qemu-img', 'resize', str(self.disk), '10G'])
 
     def create_cloud_init_image(self):
-        cloud_init_yml = self.images / 'cloud-init.yml'
-        self.cloud_init_img = self.images / 'cloud-init.img'
-        with cloud_init_yml.open('w', encoding='utf8') as f:
+        self.cloud_init_yml = self.workbench / 'cloud-init.yml'
+        self.cloud_init_img = self.workbench / 'cloud-init.img'
+        with self.cloud_init_yml.open('w', encoding='utf8') as f:
             f.write(CLOUD_INIT_YML)
 
-        check_call([
+        echo_run([
             'cloud-localds',
             str(self.cloud_init_img),
-            str(cloud_init_yml),
+            str(self.cloud_init_yml),
         ])
+
+    def cleanup(self):
+        self.cloud_init_img.unlink()
+        self.cloud_init_yml.unlink()
 
     def build(self):
         self.download()
-        self.prepare_disk_image()
+        self.unpack_upstream()
         self.create_cloud_init_image()
         self.run_qemu()
+        self.cleanup()
 
 
 class Builder_x86_64(BaseBuilder):
 
-    base_image_url = (
+    name = 'cloud-x86_64'
+
+    upstream_image_url = (
         'https://cloud-images.ubuntu.com/server/releases/16.04/release/'
         'ubuntu-16.04-server-cloudimg-amd64-disk1.img'
     )
 
     def run_qemu(self):
-        check_call([
+        echo_run([
             'qemu-system-x86_64',
             '-enable-kvm',
             '-nographic',
             '-m', '512',
             '-netdev', 'user,id=user',
             '-device', 'virtio-net-pci,netdev=user',
-            '-drive', 'index=0,media=disk,file=' + str(self.disk_img),
+            '-drive', 'index=0,media=disk,file=' + str(self.disk),
             '-drive', 'index=1,media=disk,format=raw,file='
                 + str(self.cloud_init_img),
         ])
@@ -245,7 +237,9 @@ class Builder_x86_64(BaseBuilder):
 
 class Builder_arm64(BaseBuilder):
 
-    base_image_url = (
+    name = 'cloud-arm64'
+
+    upstream_image_url = (
         'https://cloud-images.ubuntu.com/server/releases/16.04/release/'
         'ubuntu-16.04-server-cloudimg-arm64-uefi1.img'
     )
@@ -255,23 +249,19 @@ class Builder_arm64(BaseBuilder):
         'release/qemu64/QEMU_EFI.fd'
     )
 
-    def __init__(self, images):
-        super().__init__(images)
-        self.arm_bios_fd = images / 'arm-bios.fd'
+    def __init__(self, workbench):
+        super().__init__(workbench)
+        self.arm_bios_fd = workbench / 'arm-bios.fd'
 
     def download(self):
+        download_if_missing(self.arm_bios_fd, self.bios_url)
         super().download()
 
-        if not self.arm_bios_fd.is_file():
-            check_call([
-                'wget', '-q',
-                str(self.bios_url),
-                '-O', str(self.arm_bios_fd),
-            ])
-
-    def qemu_args(self):
-        return [
+    def run_qemu(self):
+        echo_run([
             'qemu-system-aarch64',
+            '-cpu', 'host',
+            '-enable-kvm',
             '-nographic',
             '-m', '512',
             '-machine', 'virt',
@@ -279,14 +269,11 @@ class Builder_arm64(BaseBuilder):
             '-netdev', 'user,id=user',
             '-device', 'virtio-net-pci,netdev=user,romfile=',
             '-device', 'virtio-blk-device,drive=image',
-            '-drive', 'if=none,id=image,file=' + str(self.disk_img),
+            '-drive', 'if=none,id=image,file=' + str(self.disk),
             '-device', 'virtio-blk-device,drive=cloud-init',
             '-drive', 'if=none,id=cloud-init,format=raw,file='
                 + str(self.cloud_init_img),
-        ]
-
-    def run_qemu(self):
-        check_call(self.qemu_args() + ['-cpu', 'host', '-enable-kvm'])
+        ])
 
 PLATFORMS = {
     'cloud-x86_64': Builder_x86_64,
@@ -297,12 +284,12 @@ def prepare_cloud_image(platform):
     print("Preparing factory image for", platform)
     builder_cls = PLATFORMS[platform]
 
-    images = Path(__file__).resolve().parent / 'images' / platform
-    images.mkdir()
+    workbench = Path(__file__).resolve().parent / 'images' / platform
+    workbench.mkdir()
     try:
-        builder_cls(images).build()
+        builder_cls(workbench).build()
     except:
-        shutil.rmtree(str(images))
+        shutil.rmtree(str(workbench))
         raise
 
 COMMANDS = {
