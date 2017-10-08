@@ -51,7 +51,7 @@ def kill_qemu_via_qmp(qmp_path):
     qmp.close()
 
 @contextmanager
-def instance(platform, shares, memory, smp):
+def instance(platform, shares, memory, smp, tcp):
     platform_home = IMAGES / platform
 
     config_json = platform_home / 'config.json'
@@ -87,11 +87,24 @@ def instance(platform, shares, memory, smp):
             'password': 'ubuntu',
         })
 
+        netdev_arg = (
+            'user,id=user,net=192.168.1.0/24,hostname=%h'
+            ',hostfwd=tcp:127.0.0.1:%p-:22' # kitchen's ssh port
+            + ''.join(
+                ',hostfwd=tcp:127.0.0.1:{}-:{}'.format(*spec.split(':'))
+                for spec in tcp
+            )
+        )
+
         platform = {
             'name': 'factory',
             'driver': {
                 'image': [{'file': str(local_disk), 'snapshot': 'off'}],
                 'memory': memory,
+                'networks': [{
+                    'netdev': netdev_arg,
+                    'device': 'virtio-net-pci,netdev=user',
+                }],
                 'cpus': smp,
                 'username': login['username'],
                 'password': login['password'],
@@ -131,9 +144,10 @@ def run_factory(platform, *args):
     parser.add_argument('-m', '--memory', default=512, type=int)
     parser.add_argument('-p', '--smp', default=1, type=int)
     parser.add_argument('args', nargs=REMAINDER)
+    parser.add_argument('--tcp', action='append', default=[])
     options = parser.parse_args(args)
 
-    with instance(platform, options.share, options.memory, options.smp):
+    with instance(platform, options.share, options.memory, options.smp, options.tcp):
         args = ['sudo'] + options.args
         cmd = ' '.join(shlex.quote(a) for a in args)
         echo_run(['kitchen', 'exec', '-c', cmd])
@@ -143,8 +157,9 @@ def login(platform, *args):
     parser.add_argument('--share', action='append', default=[])
     parser.add_argument('-m', '--memory', default=512, type=int)
     parser.add_argument('-p', '--smp', default=1, type=int)
+    parser.add_argument('--tcp', action='append', default=[])
     options = parser.parse_args(args)
-    with instance(platform, options.share, options.memory, options.smp):
+    with instance(platform, options.share, options.memory, options.smp, options.tcp):
         echo_run(['kitchen', 'login'])
 
 CLOUD_INIT_YML = """\
