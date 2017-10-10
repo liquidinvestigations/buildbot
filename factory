@@ -19,9 +19,6 @@ reference:
 * http://ubuntu-smoser.blogspot.ro/2013/02/using-ubuntu-cloud-images-without-cloud.html
 """
 
-DB_ROOT = Path.home() / '.factory'
-DB_ROOT.mkdir(exist_ok=True)
-
 repo = Path(__file__).resolve().parent
 SHARED = repo / 'shared'
 IMAGES = repo / 'images'
@@ -171,9 +168,9 @@ def download_if_missing(path, url):
 
 class BaseBuilder:
 
-    def __init__(self, workbench):
+    def __init__(self, db_root, workbench):
         self.workbench = workbench
-        self.db = DB_ROOT / self.name
+        self.db = db_root / self.name
         self.db.mkdir(exist_ok=True)
         self.disk = self.workbench / 'disk.img'
         upstream_image_name = self.upstream_image_url.rsplit('/', 1)[-1]
@@ -249,9 +246,9 @@ class Builder_arm64(BaseBuilder):
         'release/qemu64/QEMU_EFI.fd'
     )
 
-    def __init__(self, workbench):
-        super().__init__(workbench)
-        self.arm_bios_fd = workbench / 'arm-bios.fd'
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.arm_bios_fd = self.workbench / 'arm-bios.fd'
 
     def download(self):
         download_if_missing(self.arm_bios_fd, self.bios_url)
@@ -280,14 +277,21 @@ PLATFORMS = {
     'cloud-arm64': Builder_arm64,
 }
 
-def prepare_cloud_image(platform):
+def prepare_cloud_image(platform, *args):
+    parser = ArgumentParser()
+    parser.add_argument('--db', default=str(Path.home() / '.factory'))
+    options = parser.parse_args(args)
+
     print("Preparing factory image for", platform)
     builder_cls = PLATFORMS[platform]
+
+    db_root = Path(options.db)
+    db_root.mkdir(exist_ok=True)
 
     workbench = Path(__file__).resolve().parent / 'images' / platform
     workbench.mkdir()
     try:
-        builder_cls(workbench).build()
+        builder_cls(db_root, workbench).build()
     except:
         shutil.rmtree(str(workbench))
         raise

@@ -17,7 +17,9 @@ $ sudo gem install rbnacl -v 4.0.2
 $ sudo gem install rbnacl-libsodium bcrypt_pbkdf
 ```
 
-Clone factory and prepare a QEMU image for your chosen platform:
+Clone factory and prepare a QEMU image for your chosen platform. By default,
+factory will download and cache original Ubuntu cloud images in `~/.factory`,
+but you can set another path with the `--db` argument.
 ```shell
 $ git clone https://github.com/liquidinvestigations/factory.git
 $ ./factory prepare-cloud-image --platform cloud-x86_64
