@@ -15,7 +15,9 @@ parallel(
                 },
                 save: {
                     stage('CLOUD: Save the image') {
-                        sh 'cd images/cloud-x86_64 && tar c * | xz -0 > ../../cloud-x86_64-image.tar.xz'
+                        sh 'cd images/cloud-x86_64 && tar c * > ../../cloud-x86_64-image.tar'
+                        sh 'xz -0 < cloud-x86_64-image.tar > cloud-x86_64-image.tar.xz'
+                        archiveArtifacts 'cloud-x86_64-image.tar'
                         archiveArtifacts 'cloud-x86_64-image.tar.xz'
                     }
                 }
@@ -37,7 +39,9 @@ parallel(
                 },
                 save: {
                     stage('ODROID C2: Save the image') {
-                        sh 'cd images/cloud-arm64 && tar c * | xz -0 > ../../cloud-arm64-image.tar.xz'
+                        sh 'cd images/cloud-arm64 && tar c * > ../../cloud-arm64-image.tar'
+                        sh 'xz -0 < cloud-arm64-image.tar > cloud-arm64-image.tar.xz'
+                        archiveArtifacts 'cloud-arm64-image.tar'
                         archiveArtifacts 'cloud-arm64-image.tar.xz'
                     }
                 }
