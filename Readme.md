@@ -32,22 +32,23 @@ Available platforms for `prepare_cloud_image.py`:
 
 ### Usage
 
-Download the `setup` repo manually, or by using the `setup_setup` script (that
-injects the configuration from `build_config.yml`, checking out the right
-branch for setup):
-```shell
-$ ./setup_setup
-```
-
 Run a script from the `shared` folder - it runs as `root` user in the instance:
 ```shell
 $ ./factory --platform cloud-arm64 run --share shared:/mnt/shared /mnt/shared/scripts/build_odroid_image.sh
 ```
 
-Log into an ephemeral machine:
+Log into an ephemeral machine with the default image for your platform (purchased separately):
 ```shell
 $ ./factory login
 ```
+
+#### Command line options
+
+- `--platform`: name of directory under `/images` that is used to boot the image named `disk.img`, reading login settings from `config.json`
+- `--share HOST:GUEST`: shares a folder with the VM
+- `--tcp HOST:GUEST`: tcp port forwarding
+- `--memory N`: in megabytes
+- `--smp N`: number of virtual processors
 
 
 ## Automated testing
