@@ -135,7 +135,6 @@ def instance(platform, shares, memory, smp, tcp):
 
             except:
                 echo_run(['cat', '.kitchen/logs/kitchen.log'])
-                echo_run(['cat', '.kitchen/logs/vm-factory.log'])
                 raise
 
 def run_factory(platform, *args):
