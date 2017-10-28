@@ -51,7 +51,7 @@ def kill_qemu_via_qmp(qmp_path):
     qmp.close()
 
 @contextmanager
-def instance(platform, shares, memory, smp, tcp):
+def instance(platform, shares, memory, smp, tcp, udp):
     platform_home = IMAGES / platform
 
     config_json = platform_home / 'config.json'
@@ -93,6 +93,10 @@ def instance(platform, shares, memory, smp, tcp):
             + ''.join(
                 ',hostfwd=tcp:127.0.0.1:{}-:{}'.format(*spec.split(':'))
                 for spec in tcp
+            )
+            + ''.join(
+                ',hostfwd=udp:127.0.0.1:{}-:{}'.format(*spec.split(':'))
+                for spec in udp
             )
         )
 
@@ -144,9 +148,10 @@ def run_factory(platform, *args):
     parser.add_argument('-p', '--smp', default=1, type=int)
     parser.add_argument('args', nargs=REMAINDER)
     parser.add_argument('--tcp', action='append', default=[])
+    parser.add_argument('--udp', action='append', default=[])
     options = parser.parse_args(args)
 
-    with instance(platform, options.share, options.memory, options.smp, options.tcp):
+    with instance(platform, options.share, options.memory, options.smp, options.tcp, options.udp):
         args = ['sudo'] + options.args
         cmd = ' '.join(shlex.quote(a) for a in args)
         echo_run(['kitchen', 'exec', '-c', cmd])
@@ -157,8 +162,9 @@ def login(platform, *args):
     parser.add_argument('-m', '--memory', default=512, type=int)
     parser.add_argument('-p', '--smp', default=1, type=int)
     parser.add_argument('--tcp', action='append', default=[])
+    parser.add_argument('--udp', action='append', default=[])
     options = parser.parse_args(args)
-    with instance(platform, options.share, options.memory, options.smp, options.tcp):
+    with instance(platform, options.share, options.memory, options.smp, options.tcp, options.udp):
         echo_run(['kitchen', 'login'])
 
 CLOUD_INIT_YML = """\
