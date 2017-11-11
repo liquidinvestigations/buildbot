@@ -344,6 +344,3 @@ def main():
     parser.add_argument('command', choices=COMMANDS.keys())
     (options, args) = parser.parse_known_args()
     COMMANDS[options.command](options.platform, *args)
-
-if __name__ == '__main__':
-    main()
