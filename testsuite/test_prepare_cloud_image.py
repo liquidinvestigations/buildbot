@@ -1,8 +1,11 @@
+def write(path, content, mode=0o755):
+    with path.open('w', encoding='utf8') as f:
+        f.write(content)
+    path.chmod(mode)
+
+
 def test_run_touch(factory):
-    hello = factory.shared / 'hello'
-    with hello.open('w', encoding='utf8') as f:
-        f.write('#!/bin/sh\ntouch /mnt/shared/world.txt\n')
-    hello.chmod(0o755)
+    write(factory.shared / 'hello', '#!/bin/sh\ntouch /mnt/shared/world.txt\n')
 
     factory.main([
         'run',
