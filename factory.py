@@ -19,11 +19,16 @@ reference:
 * http://ubuntu-smoser.blogspot.ro/2013/02/using-ubuntu-cloud-images-without-cloud.html
 """
 
-repo = Path(__file__).resolve().parent
-SHARED = repo / 'shared'
-IMAGES = repo / 'images'
-VAR = repo / 'var'
-QEMU_HACKED_ARM = repo / 'qemu-hacked-arm'
+class Paths:
+
+    def __init__(self, repo):
+        self.repo = repo
+        self.IMAGES = repo / 'images'
+        self.VAR = repo / 'var'
+        self.QEMU_HACKED_ARM = repo / 'qemu-hacked-arm'
+
+
+paths = Paths(Path(__file__).resolve().parent)
 
 
 def get_arch():
@@ -52,7 +57,7 @@ def kill_qemu_via_qmp(qmp_path):
 
 @contextmanager
 def instance(platform, shares, memory, smp, tcp, udp):
-    platform_home = IMAGES / platform
+    platform_home = paths.IMAGES / platform
 
     config_json = platform_home / 'config.json'
     if config_json.is_file():
@@ -61,10 +66,10 @@ def instance(platform, shares, memory, smp, tcp, udp):
     else:
         config = {}
 
-    if not VAR.is_dir():
-        VAR.mkdir()
+    if not paths.VAR.is_dir():
+        paths.VAR.mkdir()
 
-    with TemporaryDirectory(prefix='kitchen-', dir=str(VAR)) as tmp_name:
+    with TemporaryDirectory(prefix='kitchen-', dir=str(paths.VAR)) as tmp_name:
         tmp = Path(tmp_name)
 
         def _share(s):
@@ -118,7 +123,7 @@ def instance(platform, shares, memory, smp, tcp, udp):
 
         if get_arch() == 'aarch64':
             platform['driver']['bios'] = str(platform_home / 'arm-bios.fd')
-            platform['driver']['binary'] = str(QEMU_HACKED_ARM)
+            platform['driver']['binary'] = str(paths.QEMU_HACKED_ARM)
 
         kitchen_yml = {
             'driver': {'name': 'qemu'},
@@ -308,7 +313,7 @@ def prepare_cloud_image(platform, *args):
     db_root = Path(options.db)
     db_root.mkdir(exist_ok=True)
 
-    workbench = repo / 'images' / platform
+    workbench = paths.repo / 'images' / platform
     workbench.mkdir()
     try:
         builder_cls(db_root, workbench).build()
@@ -335,7 +340,7 @@ def main(argv):
     else:
         raise RuntimeError("Architecture {} not supported.".format(arch))
 
-    platform_list = [x.name for x in IMAGES.iterdir() if x.is_dir()]
+    platform_list = [x.name for x in paths.IMAGES.iterdir() if x.is_dir()]
 
     parser = ArgumentParser()
     parser.add_argument('--platform',
