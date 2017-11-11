@@ -7,7 +7,7 @@ import pytest
 repo = Path(__file__).resolve().parent.parent
 sys.path[:0] = [str(repo)]
 
-import factory as factory_module
+import factory as factory_module  # noqa
 
 default_paths = factory_module.paths
 
