@@ -5,12 +5,10 @@ def write(path, content, mode=0o755):
 
 
 def test_run_touch(factory):
-    write(factory.shared / 'hello', '#!/bin/sh\ntouch /mnt/shared/world.txt\n')
-
-    factory.main([
-        'run',
-        '--share', '{}:/mnt/shared'.format(factory.shared),
-        '/mnt/shared/hello',
-    ])
-
-    assert (factory.shared / 'world.txt').is_file()
+    with TemporaryDirectory() as shared:
+        factory.main([
+            'run',
+            '--share', '{}:/mnt/shared'.format(shared),
+            'touch', '/mnt/shared/world.txt',
+        ])
+        assert (Path(shared) / 'world.txt').is_file()

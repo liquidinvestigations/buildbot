@@ -39,9 +39,6 @@ def tmpdir_factory():
                     self.images = tmp_repo / 'images'
                     self.images.mkdir()
 
-                    self.shared = tmp_repo / 'shared'
-                    self.shared.mkdir()
-
                     tmp_paths = factory_module.Paths(tmp_repo)
                     mocks.setattr(factory_module, 'paths', tmp_paths)
                     self.main = factory_module.main
