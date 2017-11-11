@@ -10,17 +10,17 @@ parallel(
             deleteDir()
             checkout scm
             try {
-                stage('CLOUD: Build a Factory') {
+                stage('X86_64: Build a Factory') {
                     sh './factory prepare-cloud-image'
                 }
                 parallel(
                     test: {
-                        stage('CLOUD: Test the image') {
+                        stage('X86_64: Test the image') {
                             sh './factory run true'
                         }
                     },
                     save: {
-                        stage('CLOUD: Save the image') {
+                        stage('X86_64: Save the image') {
                             sh 'cd images/cloud-x86_64 && tar c * > ../../cloud-x86_64-image.tar'
                             sh 'xz -0 < cloud-x86_64-image.tar > cloud-x86_64-image.tar.xz'
                             archiveArtifacts 'cloud-x86_64-image.tar'
@@ -38,17 +38,17 @@ parallel(
             deleteDir()
             checkout scm
             try {
-                stage('ODROID C2: Build a Factory') {
+                stage('ARM64: Build a Factory') {
                     sh './factory prepare-cloud-image'
                 }
                 parallel(
                     test: {
-                        stage('ODROID C2: Test the image') {
+                        stage('ARM64: Test the image') {
                             sh './factory run true'
                         }
                     },
                     save: {
-                        stage('ODROID C2: Save the image') {
+                        stage('ARM64: Save the image') {
                             sh 'cd images/cloud-arm64 && tar c * > ../../cloud-arm64-image.tar'
                             sh 'xz -0 < cloud-arm64-image.tar > cloud-arm64-image.tar.xz'
                             archiveArtifacts 'cloud-arm64-image.tar'
