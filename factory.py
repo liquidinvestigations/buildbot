@@ -308,7 +308,7 @@ def prepare_cloud_image(platform, *args):
     db_root = Path(options.db)
     db_root.mkdir(exist_ok=True)
 
-    workbench = Path(__file__).resolve().parent / 'images' / platform
+    workbench = repo / 'images' / platform
     workbench.mkdir()
     try:
         builder_cls(db_root, workbench).build()
@@ -328,7 +328,7 @@ DEFAULTS = {
 }
 
 
-def main():
+def main(argv):
     arch = get_arch()
     if arch in DEFAULTS.keys():
         default_platform = DEFAULTS[arch]
@@ -342,5 +342,5 @@ def main():
                         choices=platform_list,
                         default=default_platform)
     parser.add_argument('command', choices=COMMANDS.keys())
-    (options, args) = parser.parse_known_args()
+    (options, args) = parser.parse_known_args(argv)
     COMMANDS[options.command](options.platform, *args)

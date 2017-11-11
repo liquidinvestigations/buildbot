@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import factory
 
-factory.main()
+factory.main(sys.argv[1:])
