@@ -54,7 +54,7 @@ def test_tcp(factory, shared):
 
     with thread(lambda: factory.main(argv)):
         t0 = time()
-        timeout = 20
+        timeout = 120
 
         while time() < t0 + timeout:
             if (shared / 'up.txt').is_file():
@@ -85,7 +85,7 @@ def test_login(factory, shared):
                 command,
                 input=LOGIN_COMMANDS,
                 stdout=subprocess.PIPE,
-                timeout=60,
+                timeout=120,
                 check=True,
             )
 
@@ -106,7 +106,7 @@ def test_login(factory, shared):
 
     with thread(login):
         t0 = time()
-        timeout = 20
+        timeout = 120
 
         while time() < t0 + timeout:
             if (shared / 'up.txt').is_file():

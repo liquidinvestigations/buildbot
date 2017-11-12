@@ -42,10 +42,11 @@ class Paths:
         self.repo = repo
         self.IMAGES = repo / 'images'
         self.VAR = repo / 'var'
-        self.QEMU_HACKED_ARM = repo / 'qemu-hacked-arm'
+        self.QEMU_HACKED_ARM = code_repo / 'qemu-hacked-arm'
 
 
-paths = Paths(Path(__file__).resolve().parent)
+code_repo = Path(__file__).resolve().parent
+paths = Paths(code_repo)
 
 
 def get_arch():
@@ -184,9 +185,13 @@ class VM:
 
     def qemu_argv(self):
         arch = get_arch()
+        qemu_binary = 'qemu-system-{}'.format(arch)
+
+        if arch == 'aarch64':
+            qemu_binary = str(paths.QEMU_HACKED_ARM)
 
         yield from [
-            'qemu-system-{}'.format(arch),
+            qemu_binary,
             '-daemonize',
             '-display', 'none',
             '-chardev', 'socket,id=mon-qmp,path=vm.qmp,server,nowait',
@@ -198,10 +203,10 @@ class VM:
             '-smp', 'cpus={}'.format(self.options.smp),
         ]
 
-        # TODO
-        #if get_arch() == 'aarch64':
-        #    platform['driver']['bios'] = str(platform_home / 'arm-bios.fd')
-        #    platform['driver']['binary'] = str(paths.QEMU_HACKED_ARM)
+        if arch == 'aarch64':
+            yield from [
+                '-bios', str(self.platform_home / 'arm-bios.fd'),
+            ]
 
         netdev_arg = (
             'user,id=user,net=192.168.1.0/24,hostname=vm-factory'
