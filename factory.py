@@ -175,12 +175,12 @@ class VM:
         (self.var / 'id_ed25519').chmod(0o600)
 
         local_disk = self.var / 'local-disk.img'
-        echo_run([
-            'qemu-img', 'create',
+        subprocess.run([
+            'qemu-img', 'create', '-q',
             '-f', 'qcow2',
             '-b', str(self.platform_home / 'disk.img'),
             str(local_disk),
-        ])
+        ], check=True, )
 
     def qemu_argv(self):
         arch = get_arch()
@@ -263,16 +263,13 @@ class VM:
         t0 = time()
         while time() < t0 + timeout:
             try:
-                print('ssh to vm ...')
                 pty_ssh(self.remote, self.port, password, bootstrap)
 
             except PtyProcessError:
-                print('nope, retrying in 1s')
                 sleep(1)
                 continue
 
             else:
-                print('success! vm is ready')
                 return
 
         raise RuntimeError("VM not up after {} seconds".format(timeout))
@@ -282,7 +279,6 @@ class VM:
         with cd(self.var):
             try:
                 qemu = list(self.qemu_argv())
-                print('+', ' '.join(qemu))
                 subprocess.Popen(qemu)
 
                 self.vm_bootstrap()
@@ -292,7 +288,9 @@ class VM:
             finally:
                 kill_qemu_via_qmp('vm.qmp')
 
-    invoke_ssh = staticmethod(echo_run)
+    @staticmethod
+    def invoke_ssh(cmd):
+        subprocess.run(cmd, check=True)
 
     def ssh(self, cmd=None):
         ssh_command = [
