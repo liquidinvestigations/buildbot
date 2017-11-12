@@ -1,6 +1,6 @@
 from time import time, sleep
 import subprocess
-from conftest import thread
+from conftest import thread, monkeypatcher
 
 
 def write(path, content, mode=0o755):
@@ -67,3 +67,52 @@ def test_tcp(factory, shared):
         assert http_get('http://localhost:42657/foo.txt') == b'-- bar --'
 
     assert (shared / 'done.txt').is_file()
+
+
+def test_login(factory, shared):
+    LOGIN_COMMANDS = b'sudo /mnt/shared/app\necho huzzah\nexit\n'
+
+    write(shared / 'app', TCP_APP)
+    write(shared / 'foo.txt', '-- bar --')
+    result = None
+
+    def login():
+        import factory as factory_module  # noqa
+
+        def patched_vm_login():
+            nonlocal result
+            result = subprocess.run(
+                ['kitchen', 'login'],
+                input=LOGIN_COMMANDS,
+                stdout=subprocess.PIPE,
+                timeout=60,
+                check=True,
+            )
+
+        with monkeypatcher() as mocks:
+            mocks.setattr(factory_module, 'vm_login', patched_vm_login)
+
+            argv = [
+                'login',
+                '--share', '{}:/mnt/shared'.format(shared),
+                '--tcp', '42657:8000',
+            ]
+
+            factory_module.main(argv)
+
+    with thread(login):
+        t0 = time()
+        timeout = 20
+
+        while time() < t0 + timeout:
+            if (shared / 'up.txt').is_file():
+                break
+            sleep(.5)
+
+        else:
+            raise RuntimeError('app is not up after %d seconds' % timeout)
+
+        assert http_get('http://localhost:42657/foo.txt') == b'-- bar --'
+
+    assert (shared / 'done.txt').is_file()
+    assert b'huzzah' in result.stdout

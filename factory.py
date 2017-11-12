@@ -55,6 +55,7 @@ def kill_qemu_via_qmp(qmp_path):
     qmp.sendall(b'{"execute": "quit"}\n')
     qmp.close()
 
+
 @contextmanager
 def instance(platform, shares, memory, smp, tcp, udp):
     platform_home = paths.IMAGES / platform
@@ -146,6 +147,15 @@ def instance(platform, shares, memory, smp, tcp, udp):
                 echo_run(['cat', '.kitchen/logs/kitchen.log'])
                 raise
 
+
+def vm_exec(cmd):
+    echo_run(['kitchen', 'exec', '-c', cmd])
+
+
+def vm_login():
+    echo_run(['kitchen', 'login'])
+
+
 def run_factory(platform, *args):
     parser = ArgumentParser()
     parser.add_argument('--share', action='append', default=[])
@@ -159,7 +169,7 @@ def run_factory(platform, *args):
     with instance(platform, options.share, options.memory, options.smp, options.tcp, options.udp):
         args = ['sudo'] + options.args
         cmd = ' '.join(shlex.quote(a) for a in args)
-        echo_run(['kitchen', 'exec', '-c', cmd])
+        vm_exec(cmd)
 
 def login(platform, *args):
     parser = ArgumentParser()
@@ -170,7 +180,7 @@ def login(platform, *args):
     parser.add_argument('--udp', action='append', default=[])
     options = parser.parse_args(args)
     with instance(platform, options.share, options.memory, options.smp, options.tcp, options.udp):
-        echo_run(['kitchen', 'login'])
+        vm_login()
 
 CLOUD_INIT_YML = """\
 #cloud-config
