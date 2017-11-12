@@ -12,7 +12,7 @@ def write(path, content, mode=0o755):
     path.chmod(mode)
 
 
-def test_run_touch(factory):
+def test_touch(factory):
     with TemporaryDirectory() as shared:
         factory.main([
             'run',
