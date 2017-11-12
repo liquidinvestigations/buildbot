@@ -79,10 +79,10 @@ def test_login(factory, shared):
     def login():
         import factory as factory_module  # noqa
 
-        def patched_vm_login():
+        def invoke_ssh(command):
             nonlocal result
             result = subprocess.run(
-                ['kitchen', 'login'],
+                command,
                 input=LOGIN_COMMANDS,
                 stdout=subprocess.PIPE,
                 timeout=60,
@@ -90,7 +90,11 @@ def test_login(factory, shared):
             )
 
         with monkeypatcher() as mocks:
-            mocks.setattr(factory_module, 'vm_login', patched_vm_login)
+            mocks.setattr(
+                factory_module.VM,
+                'invoke_ssh',
+                staticmethod(invoke_ssh),
+            )
 
             argv = [
                 'login',

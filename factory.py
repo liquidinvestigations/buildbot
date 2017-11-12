@@ -292,6 +292,8 @@ class VM:
             finally:
                 kill_qemu_via_qmp('vm.qmp')
 
+    invoke_ssh = staticmethod(echo_run)
+
     def ssh(self, cmd=None):
         ssh_command = [
             'ssh',
@@ -306,7 +308,7 @@ class VM:
         if cmd:
             ssh_command.append(cmd)
 
-        echo_run(ssh_command)
+        self.invoke_ssh(ssh_command)
 
 
 def add_vm_arguments(parser):
