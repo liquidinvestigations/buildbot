@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
 import os
+import pty
+from time import time, sleep
 import json
+import random
 from pathlib import Path
 import socket
 import shutil
 from tempfile import TemporaryDirectory
-from subprocess import run, check_output
+import subprocess
 from contextlib import contextmanager
 from argparse import ArgumentParser, REMAINDER
 import shlex
@@ -18,6 +21,20 @@ reference:
 * https://help.ubuntu.com/community/UEC/Images#Ubuntu_Cloud_Guest_images_on_12.04_LTS_.28Precise.29_and_beyond_using_NoCloud
 * http://ubuntu-smoser.blogspot.ro/2013/02/using-ubuntu-cloud-images-without-cloud.html
 """
+
+SSH_PRIVKEY = '''\
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACDPUAQxsWJNjIyRzGt9FLdeuv7OtWJNYnk592l4wJ57zwAAAJDgnRRK4J0U
+SgAAAAtzc2gtZWQyNTUxOQAAACDPUAQxsWJNjIyRzGt9FLdeuv7OtWJNYnk592l4wJ57zw
+AAAEBAAQzlJCFP03EyDr5D6ssyBshQ+1dvDYaZFXqkasWEs89QBDGxYk2MjJHMa30Ut166
+/s61Yk1ieTn3aXjAnnvPAAAACW1nYXhAdHVmYQECAwQ=
+-----END OPENSSH PRIVATE KEY-----
+'''
+
+SSH_PUBKEY = ('ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM9QBDG'
+              'xYk2MjJHMa30Ut166/s61Yk1ieTn3aXjAnnvP factory')
+
 
 class Paths:
 
@@ -32,11 +49,11 @@ paths = Paths(Path(__file__).resolve().parent)
 
 
 def get_arch():
-    return check_output(['uname', '-m']).decode('latin1').strip()
+    return subprocess.check_output(['uname', '-m']).decode('latin1').strip()
 
 def echo_run(cmd):
     print('+', *cmd)
-    run(cmd, check=True)
+    subprocess.run(cmd, check=True)
 
 @contextmanager
 def cd(path):
@@ -56,9 +73,143 @@ def kill_qemu_via_qmp(qmp_path):
     qmp.close()
 
 
+def qemu_argv(var, port, shares, memory, smp, tcp, udp):
+    arch = get_arch()
+
+    yield from [
+        'qemu-system-{}'.format(arch),
+        '-daemonize',
+        '-display', 'none',
+        '-chardev', 'socket,id=mon-qmp,path=vm.qmp,server,nowait',
+        '-mon', 'chardev=mon-qmp,mode=control,default',
+        '-serial', 'mon:unix:path=vm.mon,server,nowait',
+        '-m', str(memory),
+        '-enable-kvm',
+        '-cpu', 'host',
+        '-smp', 'cpus={}'.format(smp),
+    ]
+
+    # TODO
+    #if get_arch() == 'aarch64':
+    #    platform['driver']['bios'] = str(platform_home / 'arm-bios.fd')
+    #    platform['driver']['binary'] = str(paths.QEMU_HACKED_ARM)
+
+    netdev_arg = (
+        'user,id=user,net=192.168.1.0/24,hostname=vm-factory'
+        ',hostfwd=tcp:127.0.0.1:{}-:22'.format(port)
+        + ''.join(
+            ',hostfwd=tcp:127.0.0.1:{}-:{}'.format(*spec.split(':'))
+            for spec in tcp
+        )
+        + ''.join(
+            ',hostfwd=udp:127.0.0.1:{}-:{}'.format(*spec.split(':'))
+            for spec in udp
+        )
+    )
+
+    yield from [
+        '-netdev', netdev_arg,
+        '-device', 'virtio-net-pci,netdev=user',
+    ]
+
+    disk = (
+        'if=none,id=drive0,snapshot=off,discard=unmap,detect-zeroes=unmap,'
+        'file={}/local-disk.img'
+        .format(var)
+    )
+
+    yield from [
+        '-device', 'virtio-scsi-pci,id=scsi',
+        '-device', 'scsi-hd,drive=drive0',
+        '-drive', disk,
+    ]
+
+    for i, s in enumerate(shares):
+        (path, mountpoint) = s.split(':')
+        yield from [
+            '-fsdev', 'local,id=fsdev{i},security_model=none,path={path}'
+                .format(i=i, path=path),
+            '-device', 'virtio-9p-pci,fsdev=fsdev{i},mount_tag=path{i}'
+                .format(i=i),
+        ]
+
+
+class PtyProcessError(RuntimeError):
+    pass
+
+
+@contextmanager
+def pty_process(command):
+    """
+    Start subprocess in a new PTY. Helps with the interactive ssh password
+    prompt.
+    """
+
+    (pid, fd) = pty.fork()
+    if not pid:
+        os.execv(command[0], command)
+
+    try:
+        yield fd
+
+    finally:
+        (_, exit_code) = os.waitpid(pid, 0)
+        if exit_code != 0:
+            raise PtyProcessError()
+
+
+def pty_ssh(remote, port, password, command):
+    ssh_args = [
+        '/usr/bin/ssh', remote,
+        '-p', str(port),
+        '-o', 'NumberOfPasswordPrompts=1',
+        '-o', 'StrictHostKeyChecking=no',
+        '-o', 'UserKnownHostsFile=known_hosts',
+        command,
+    ]
+
+    with pty_process(ssh_args) as fd:
+        while True:
+            try:
+                output = os.read(fd, 1024)
+            except:
+                return
+
+            if b'password:' in output.lower().strip():
+                os.write(fd, password.encode('utf8') + b'\n')
+                need_password = False
+
+        while True:
+            try:
+                print(os.read(fd, 1024))
+            except:
+                return
+
+
+SET_UP_VM = 'mkdir -p ~/.ssh && echo "{}" >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys'.format(SSH_PUBKEY)
+
+
+def vm_bootstrap(remote, port, password, timeout=60):
+    t0 = time()
+    while time() < t0 + timeout:
+        try:
+            pty_ssh(remote, port, password, SET_UP_VM)
+
+        except PtyProcessError:
+            sleep(1)
+            continue
+
+        else:
+            return
+
+    raise RuntimeError("VM not up after {} seconds".format(timeout))
+
+
 @contextmanager
 def instance(platform, shares, memory, smp, tcp, udp):
     platform_home = paths.IMAGES / platform
+
+    port = random.randint(1025, 65535)
 
     config_json = platform_home / 'config.json'
     if config_json.is_file():
@@ -70,17 +221,14 @@ def instance(platform, shares, memory, smp, tcp, udp):
     if not paths.VAR.is_dir():
         paths.VAR.mkdir()
 
-    with TemporaryDirectory(prefix='kitchen-', dir=str(paths.VAR)) as tmp_name:
-        tmp = Path(tmp_name)
+    with TemporaryDirectory(prefix='vm-', dir=str(paths.VAR)) as tmp_name:
+        var = Path(tmp_name)
 
-        def _share(s):
-            (path, mountpoint) = s.split(':')
-            return {
-                'path': str(Path(path).resolve()),
-                'mountpoint': mountpoint,
-            }
+        with (var / 'id_ed25519').open('w', encoding='latin1') as f:
+            f.write(SSH_PRIVKEY)
+        (var / 'id_ed25519').chmod(0o600)
 
-        local_disk = tmp / 'local-disk.img'
+        local_disk = var / 'local-disk.img'
         echo_run([
             'qemu-img', 'create',
             '-f', 'qcow2',
@@ -93,67 +241,43 @@ def instance(platform, shares, memory, smp, tcp, udp):
             'password': 'ubuntu',
         })
 
-        netdev_arg = (
-            'user,id=user,net=192.168.1.0/24,hostname=%h'
-            ',hostfwd=tcp:127.0.0.1:%p-:22' # kitchen's ssh port
-            + ''.join(
-                ',hostfwd=tcp:127.0.0.1:{}-:{}'.format(*spec.split(':'))
-                for spec in tcp
-            )
-            + ''.join(
-                ',hostfwd=udp:127.0.0.1:{}-:{}'.format(*spec.split(':'))
-                for spec in udp
-            )
-        )
-
-        platform = {
-            'name': 'factory',
-            'driver': {
-                'image': [{'file': str(local_disk), 'snapshot': 'off'}],
-                'memory': memory,
-                'networks': [{
-                    'netdev': netdev_arg,
-                    'device': 'virtio-net-pci,netdev=user',
-                }],
-                'cpus': smp,
-                'username': login['username'],
-                'password': login['password'],
-                'hostshares': [_share(s) for s in shares],
-            },
-        }
-
-        if get_arch() == 'aarch64':
-            platform['driver']['bios'] = str(platform_home / 'arm-bios.fd')
-            platform['driver']['binary'] = str(paths.QEMU_HACKED_ARM)
-
-        kitchen_yml = {
-            'driver': {'name': 'qemu'},
-            'platforms': [platform],
-            'suites': [{'name': 'vm'}],
-        }
-
-        with (tmp / '.kitchen.yml').open('w', encoding='utf8') as f:
-            print(json.dumps(kitchen_yml, indent=2), file=f)
-
-        with cd(tmp):
+        with cd(var):
             try:
-                try:
-                    echo_run(['kitchen', 'create'])
-                    yield
-                finally:
-                    kill_qemu_via_qmp('.kitchen/vm-factory.qmp')
+                qemu = list(qemu_argv(var, port, shares, memory, smp, tcp, udp))
+                print('+', ' '.join(qemu))
+                subprocess.Popen(qemu)
 
-            except:
-                echo_run(['cat', '.kitchen/logs/kitchen.log'])
-                raise
+                remote = '{}@localhost'.format(login['username'])
+
+                vm_bootstrap(remote, port, login['password'])
+
+                yield VM(remote, port)
+
+            finally:
+                kill_qemu_via_qmp('vm.qmp')
 
 
-def vm_exec(cmd):
-    echo_run(['kitchen', 'exec', '-c', cmd])
+class VM:
 
+    def __init__(self, remote, port):
+        self.remote = remote
+        self.port = port
 
-def vm_login():
-    echo_run(['kitchen', 'login'])
+    def ssh(self, cmd=None):
+        ssh_command = [
+            'ssh',
+            self.remote,
+            '-p', str(self.port),
+            '-o', 'UserKnownHostsFile=known_hosts',
+            '-o', 'ConnectTimeout=1',
+            '-o', 'IdentitiesOnly=yes',
+            '-i', 'id_ed25519',
+        ]
+
+        if cmd:
+            ssh_command.append(cmd)
+
+        echo_run(ssh_command)
 
 
 def run_factory(platform, *args):
@@ -166,10 +290,10 @@ def run_factory(platform, *args):
     parser.add_argument('--udp', action='append', default=[])
     options = parser.parse_args(args)
 
-    with instance(platform, options.share, options.memory, options.smp, options.tcp, options.udp):
+    with instance(platform, options.share, options.memory, options.smp, options.tcp, options.udp) as vm:
         args = ['sudo'] + options.args
         cmd = ' '.join(shlex.quote(a) for a in args)
-        vm_exec(cmd)
+        vm.ssh(cmd)
 
 def login(platform, *args):
     parser = ArgumentParser()
@@ -179,8 +303,8 @@ def login(platform, *args):
     parser.add_argument('--tcp', action='append', default=[])
     parser.add_argument('--udp', action='append', default=[])
     options = parser.parse_args(args)
-    with instance(platform, options.share, options.memory, options.smp, options.tcp, options.udp):
-        vm_login()
+    with instance(platform, options.share, options.memory, options.smp, options.tcp, options.udp) as vm:
+        vm.ssh()
 
 CLOUD_INIT_YML = """\
 #cloud-config
