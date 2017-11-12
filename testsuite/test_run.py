@@ -1,7 +1,4 @@
 from time import time, sleep
-from contextlib import contextmanager
-from tempfile import TemporaryDirectory
-from pathlib import Path
 import subprocess
 from conftest import thread
 
@@ -12,14 +9,13 @@ def write(path, content, mode=0o755):
     path.chmod(mode)
 
 
-def test_touch(factory):
-    with TemporaryDirectory() as shared:
-        factory.main([
-            'run',
-            '--share', '{}:/mnt/shared'.format(shared),
-            'touch', '/mnt/shared/world.txt',
-        ])
-        assert (Path(shared) / 'world.txt').is_file()
+def test_touch(factory, shared):
+    factory.main([
+        'run',
+        '--share', '{}:/mnt/shared'.format(shared),
+        'touch', '/mnt/shared/world.txt',
+    ])
+    assert (shared / 'world.txt').is_file()
 
 
 TCP_APP = '''\
@@ -45,31 +41,29 @@ def http_get(url):
     return subprocess.check_output(['curl', url])
 
 
-def test_tcp(factory):
-    with TemporaryDirectory() as shared:
-        shared = Path(shared)
-        write(shared / 'app', TCP_APP)
-        write(shared / 'foo.txt', '-- bar --')
+def test_tcp(factory, shared):
+    write(shared / 'app', TCP_APP)
+    write(shared / 'foo.txt', '-- bar --')
 
-        argv = [
-            'run',
-            '--share', '{}:/mnt/shared'.format(shared),
-            '--tcp', '42657:8000',
-            '/mnt/shared/app',
-        ]
+    argv = [
+        'run',
+        '--share', '{}:/mnt/shared'.format(shared),
+        '--tcp', '42657:8000',
+        '/mnt/shared/app',
+    ]
 
-        with thread(lambda: factory.main(argv)):
-            t0 = time()
-            timeout = 20
+    with thread(lambda: factory.main(argv)):
+        t0 = time()
+        timeout = 20
 
-            while time() < t0 + timeout:
-                if (shared / 'up.txt').is_file():
-                    break
-                sleep(.5)
+        while time() < t0 + timeout:
+            if (shared / 'up.txt').is_file():
+                break
+            sleep(.5)
 
-            else:
-                raise RuntimeError('app is not up after %d seconds' % timeout)
+        else:
+            raise RuntimeError('app is not up after %d seconds' % timeout)
 
-            assert http_get('http://localhost:42657/foo.txt') == b'-- bar --'
+        assert http_get('http://localhost:42657/foo.txt') == b'-- bar --'
 
-        assert (shared / 'done.txt').is_file()
+    assert (shared / 'done.txt').is_file()

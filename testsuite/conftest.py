@@ -74,3 +74,9 @@ def factory(cloud_image):
     with tmpdir_factory() as factory:
         (factory.images / cloud_image.name).symlink_to(cloud_image)
         yield factory
+
+
+@pytest.fixture
+def shared():
+    with TemporaryDirectory() as tmp:
+        yield Path(tmp)
