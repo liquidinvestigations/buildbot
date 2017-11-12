@@ -2,6 +2,7 @@ import sys
 from contextlib import contextmanager
 from tempfile import TemporaryDirectory
 from pathlib import Path
+import threading
 import pytest
 
 repo = Path(__file__).resolve().parent.parent
@@ -24,6 +25,14 @@ def monkeypatcher():
         yield mocks
     finally:
         mocks.undo()
+
+
+@contextmanager
+def thread(target):
+    t = threading.Thread(target=target)
+    t.start()
+    yield
+    t.join()
 
 
 @contextmanager

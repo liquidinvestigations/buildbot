@@ -2,8 +2,8 @@ from time import time, sleep
 from contextlib import contextmanager
 from tempfile import TemporaryDirectory
 from pathlib import Path
-import threading
 import subprocess
+from conftest import thread
 
 
 def write(path, content, mode=0o755):
@@ -41,14 +41,6 @@ Path('done.txt').touch()
 '''
 
 
-@contextmanager
-def factory_thread(target):
-    thread = threading.Thread(target=target)
-    thread.start()
-    yield
-    thread.join()
-
-
 def http_get(url):
     return subprocess.check_output(['curl', url])
 
@@ -66,7 +58,7 @@ def test_tcp(factory):
             '/mnt/shared/app',
         ]
 
-        with factory_thread(lambda: factory.main(argv)):
+        with thread(lambda: factory.main(argv)):
             t0 = time()
             timeout = 20
 
