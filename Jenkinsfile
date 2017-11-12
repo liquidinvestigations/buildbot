@@ -45,6 +45,11 @@ parallel(
             try {
                 parallel(
                     test: {
+                        stage('ARM64: Run the test suite') {
+                            sh 'virtualenv -p python3 venv'
+                            sh './venv/bin/python ./venv/bin/pip install -r requirements.txt'
+                            sh './venv/bin/python ./venv/bin/pytest'
+                        }
                     },
                     build: {
                         stage('ARM64: Build a reusable image') {
