@@ -125,9 +125,6 @@ def pty_ssh(remote, port, password, command):
                 return
 
 
-SET_UP_VM = 'mkdir -p ~/.ssh && echo "{}" >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys'.format(SSH_PUBKEY)
-
-
 DEFAULT_LOGIN = {
     'username': 'ubuntu',
     'password': 'ubuntu',
@@ -166,6 +163,11 @@ class VM:
         self.login = self.config.get('login', DEFAULT_LOGIN)
         self.remote = '{}@localhost'.format(self.login['username'])
         self.port = random.randint(1025, 65535)
+
+        self.shares = []
+        for i, s in enumerate(self.options.share):
+            (path, mountpoint) = s.split(':')
+            self.shares.append((i, Path(path).resolve(), mountpoint))
 
     def setup_var(self):
         with (self.var / 'id_ed25519').open('w', encoding='latin1') as f:
@@ -231,8 +233,7 @@ class VM:
             '-drive', disk,
         ]
 
-        for i, s in enumerate(self.options.share):
-            (path, mountpoint) = s.split(':')
+        for i, path, _ in self.shares:
             yield from [
                 '-fsdev', 'local,id=fsdev{i},security_model=none,path={path}'
                     .format(i=i, path=path),
@@ -240,18 +241,38 @@ class VM:
                     .format(i=i),
             ]
 
+    def vm_bootstrap_commands(self):
+        yield from [
+            'mkdir -p ~/.ssh',
+            'echo "{}" >> ~/.ssh/authorized_keys'.format(SSH_PUBKEY),
+            'chmod 700 ~/.ssh',
+            'chmod 600 ~/.ssh/authorized_keys',
+        ]
+
+        for i, _, mountpoint in self.shares:
+            quoted_mountpoint = shlex.quote(mountpoint)
+            yield 'sudo mkdir -p {}'.format(quoted_mountpoint)
+            yield (
+                'sudo mount -t 9p -o trans=virtio path{} {} -oversion=9p2000.L'
+                .format(i, quoted_mountpoint)
+            )
+
     def vm_bootstrap(self, timeout=60):
         password = self.login['password']
+        bootstrap = ' && '.join(self.vm_bootstrap_commands())
         t0 = time()
         while time() < t0 + timeout:
             try:
-                pty_ssh(self.remote, self.port, password, SET_UP_VM)
+                print('ssh to vm ...')
+                pty_ssh(self.remote, self.port, password, bootstrap)
 
             except PtyProcessError:
+                print('nope, retrying in 1s')
                 sleep(1)
                 continue
 
             else:
+                print('success! vm is ready')
                 return
 
         raise RuntimeError("VM not up after {} seconds".format(timeout))
