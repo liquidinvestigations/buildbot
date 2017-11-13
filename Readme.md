@@ -1,29 +1,22 @@
 ## Liquid Factory
 
-An automated build environment that uses [Kitchen](http://kitchen.ci) and QEMU
-to create virtual machines based on [Ubuntu Cloud
-Images](https://cloud-images.ubuntu.com). It supports the `x86_64` and
-`aarch64` architectures.
-
-The build environment can also run VMs that it produces, to facilitate testing.
+A command-line virtual machine runner that uses QEMU to create virtual machines
+based on [Ubuntu Cloud Images](https://cloud-images.ubuntu.com). It supports
+the `x86_64` and `aarch64` architectures.
 
 ### Setup
 
-Install required dependencies (assumes Ubuntu 16.04):
+Install factory and its dependencies (assumes Ubuntu 16.04):
+
 ```shell
-$ sudo apt install -y wget ruby ruby-dev build-essential cloud-utils qemu-kvm genisoimage
-$ sudo gem install test-kitchen kitchen-qemu
-$ sudo gem install rbnacl -v 4.0.2
-$ sudo gem install rbnacl-libsodium bcrypt_pbkdf
+$ sudo apt install -y wget cloud-utils qemu-kvm genisoimage
+$ git clone https://github.com/liquidinvestigations/factory
+$ cd factory
+$ ./factory prepare-cloud-image
 ```
 
-Clone factory and prepare a QEMU image for your chosen platform. By default,
-factory will download and cache original Ubuntu cloud images in `~/.factory`,
-but you can set another path with the `--db` argument.
-```shell
-$ git clone https://github.com/liquidinvestigations/factory.git
-$ ./factory prepare-cloud-image --platform cloud-x86_64
-```
+By default, factory will download and cache original Ubuntu cloud images in
+`~/.factory`, but you can set another path with the `--db` argument.
 
 Available platforms for `prepare_cloud_image.py`:
 - `cloud-x86_64` (available only on `x86_64` hosts)
@@ -31,36 +24,59 @@ Available platforms for `prepare_cloud_image.py`:
 
 
 ### Usage
+Factory works in two modes: `login` starts a VM and logs in via SSH; `run`
+executes a command as root. In both cases, the VM runs with a temporary disk,
+and it's destroyed as soon as the command/login finishes.
 
-Run a script from the `shared` folder - it runs as `root` user in the instance:
-```shell
-$ ./factory --platform cloud-arm64 run --share shared:/mnt/shared /mnt/shared/scripts/build_odroid_image.sh
-```
+* `login`:
 
-Log into an ephemeral machine with the default image for your platform (purchased separately):
-```shell
-$ ./factory login
-```
+    ```
+    ./factory login
+    ```
 
-#### Command line options
+* `run`:
 
-- `--platform`: name of directory under `/images` that is used to boot the image named `disk.img`, reading login settings from `config.json`
-- `--share HOST:GUEST`: shares a folder with the VM
-- `--tcp HOST:GUEST`: tcp port forwarding
-- `--memory N`: in megabytes
-- `--smp N`: number of virtual processors
+    ```
+    ./factory run whoami
+    ```
 
+Common options, before the `login` or `run` command:
 
-## Automated testing
+* `--platform`: name of directory under `images` that is used to boot the image
+  named `disk.img`, reading login settings from `config.json`. Defaults to
+  `cloud-$ARCHITECTURE`, the image created by the `prepare-cloud-image` command
 
-[Jenkins](https://jenkins.io/) is used for running automated tests on multiple
-nodes of different architectures. Two types of nodes are being used: `x86_64`
-and `arm64`.
+Both modes support the following options:
 
-The `Jenkinsfile` defines the stages run on each architecture.
+* `--share`: share a folder with the VM. Can be used multiple times. The first
+  path is the local path, the second is the mount point inside the VM.
 
+    ```
+    ./factory login --share local/path/shared:/mnt/shared
+    ```
 
-### Reference
-* https://github.com/esmil/kitchen-qemu
-* https://help.ubuntu.com/community/UEC/Images#Ubuntu_Cloud_Guest_images_on_12.04_LTS_.28Precise.29_and_beyond_using_NoCloud
-* http://odroid.com/dokuwiki/doku.php?id=en:c2_ubuntu_cloud
+* `--smp`: number of cores, default is `1`
+
+    ```
+    ./factory login --smp 2
+    ```
+
+* `--memory`: RAM in megabytes, default is `512`
+
+    ```
+    ./factory login --memory 2048
+    ```
+
+* `--tcp`: forward a TCP port. The first number is the host port, the second
+  number is the VM port.
+
+    ```
+    ./factory login --tcp 8080:80
+    ```
+
+* `--udp`: forward a UDP port. The first number is the host port, the second
+  number is the VM port.
+
+    ```
+    ./factory login --udp 1053:53
+    ```
