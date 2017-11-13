@@ -1,5 +1,6 @@
 from time import time, sleep
 import subprocess
+import random
 from conftest import thread, monkeypatcher
 
 
@@ -37,18 +38,23 @@ Path('done.txt').touch()
 '''
 
 
+def random_port():
+    return random.randint(1025, 65535)
+
+
 def http_get(url):
     return subprocess.check_output(['curl', url])
 
 
 def test_tcp(factory, shared):
+    host_port = random_port()
     write(shared / 'app', TCP_APP)
     write(shared / 'foo.txt', '-- bar --')
 
     argv = [
         'run',
         '--share', '{}:/mnt/shared'.format(shared),
-        '--tcp', '42657:8000',
+        '--tcp', '{}:8000'.format(host_port),
         '/mnt/shared/app',
     ]
 
@@ -64,7 +70,8 @@ def test_tcp(factory, shared):
         else:
             raise RuntimeError('app is not up after %d seconds' % timeout)
 
-        assert http_get('http://localhost:42657/foo.txt') == b'-- bar --'
+        resp = http_get('http://localhost:{}/foo.txt'.format(host_port))
+        assert resp == b'-- bar --'
 
     assert (shared / 'done.txt').is_file()
 
@@ -72,6 +79,7 @@ def test_tcp(factory, shared):
 def test_login(factory, shared):
     LOGIN_COMMANDS = b'sudo /mnt/shared/app\necho huzzah\nexit\n'
 
+    host_port = random_port()
     write(shared / 'app', TCP_APP)
     write(shared / 'foo.txt', '-- bar --')
     result = None
@@ -99,7 +107,7 @@ def test_login(factory, shared):
             argv = [
                 'login',
                 '--share', '{}:/mnt/shared'.format(shared),
-                '--tcp', '42657:8000',
+                '--tcp', '{}:8000'.format(host_port),
             ]
 
             factory_module.main(argv)
@@ -116,7 +124,8 @@ def test_login(factory, shared):
         else:
             raise RuntimeError('app is not up after %d seconds' % timeout)
 
-        assert http_get('http://localhost:42657/foo.txt') == b'-- bar --'
+        resp = http_get('http://localhost:{}/foo.txt'.format(host_port))
+        assert resp == b'-- bar --'
 
     assert (shared / 'done.txt').is_file()
     assert b'huzzah' in result.stdout
