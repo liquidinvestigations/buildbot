@@ -11,14 +11,14 @@ parallel(
             checkout scm
             try {
                 parallel(
-                    test: {
+                    x86_64_test: {
                         stage('X86_64: Run the test suite') {
                             sh 'virtualenv -p python3 venv'
                             sh './venv/bin/python ./venv/bin/pip install -r requirements.txt'
                             sh './venv/bin/python ./venv/bin/pytest'
                         }
                     },
-                    build: {
+                    x86_64_build: {
                         stage('X86_64: Build a reusable image') {
                             sh './factory prepare-cloud-image'
                         }
@@ -44,14 +44,14 @@ parallel(
             checkout scm
             try {
                 parallel(
-                    test: {
+                    arm64_test: {
                         stage('ARM64: Run the test suite') {
                             sh 'virtualenv -p python3 venv'
                             sh './venv/bin/python ./venv/bin/pip install -r requirements.txt'
                             sh './venv/bin/python ./venv/bin/pytest'
                         }
                     },
-                    build: {
+                    arm64_build: {
                         stage('ARM64: Build a reusable image') {
                             sh './factory prepare-cloud-image'
                         }
