@@ -1,6 +1,8 @@
 from time import time, sleep
 import subprocess
 import random
+from contextlib import closing
+from urllib.request import urlopen
 from conftest import thread, monkeypatcher
 
 
@@ -43,7 +45,8 @@ def random_port():
 
 
 def http_get(url):
-    return subprocess.check_output(['curl', url])
+    with closing(urlopen(url)) as resp:
+        return resp.read()
 
 
 def test_tcp(factory, shared):
