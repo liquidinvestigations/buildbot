@@ -10,17 +10,22 @@ parallel(
             deleteDir()
             checkout scm
             try {
-                stage('CLOUD: Build a Factory') {
-                    sh './factory prepare-cloud-image'
-                }
                 parallel(
-                    test: {
-                        stage('CLOUD: Test the image') {
-                            sh './factory run true'
+                    x86_64_test: {
+                        stage('X86_64: Run the test suite') {
+                            sh 'virtualenv -p python3 venv'
+                            sh './venv/bin/python ./venv/bin/pip install -r requirements.txt'
+                            sh './venv/bin/python ./venv/bin/pytest'
                         }
                     },
-                    save: {
-                        stage('CLOUD: Save the image') {
+                    x86_64_build: {
+                        stage('X86_64: Build a reusable image') {
+                            sh './factory prepare-cloud-image'
+                        }
+                        stage('X86_64: Check the image') {
+                            sh './factory run true'
+                        }
+                        stage('X86_64: Save artifacts') {
                             sh 'cd images/cloud-x86_64 && tar c * > ../../cloud-x86_64-image.tar'
                             sh 'xz -0 < cloud-x86_64-image.tar > cloud-x86_64-image.tar.xz'
                             archiveArtifacts 'cloud-x86_64-image.tar'
@@ -38,17 +43,22 @@ parallel(
             deleteDir()
             checkout scm
             try {
-                stage('ODROID C2: Build a Factory') {
-                    sh './factory prepare-cloud-image'
-                }
                 parallel(
-                    test: {
-                        stage('ODROID C2: Test the image') {
-                            sh './factory run true'
+                    arm64_test: {
+                        stage('ARM64: Run the test suite') {
+                            sh 'virtualenv -p python3 venv'
+                            sh './venv/bin/python ./venv/bin/pip install -r requirements.txt'
+                            sh './venv/bin/python ./venv/bin/pytest'
                         }
                     },
-                    save: {
-                        stage('ODROID C2: Save the image') {
+                    arm64_build: {
+                        stage('ARM64: Build a reusable image') {
+                            sh './factory prepare-cloud-image'
+                        }
+                        stage('ARM64: Check the image') {
+                            sh './factory run true'
+                        }
+                        stage('ARM64: Save artifacts') {
                             sh 'cd images/cloud-arm64 && tar c * > ../../cloud-arm64-image.tar'
                             sh 'xz -0 < cloud-arm64-image.tar > cloud-arm64-image.tar.xz'
                             archiveArtifacts 'cloud-arm64-image.tar'
