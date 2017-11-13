@@ -117,7 +117,6 @@ def pty_ssh(remote, port, password, command):
 
             if b'password:' in output.lower().strip():
                 os.write(fd, password.encode('utf8') + b'\n')
-                need_password = False
 
         while True:
             try:
