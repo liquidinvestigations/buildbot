@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import os
 import pty
 from time import time, sleep
@@ -267,6 +268,8 @@ class VM:
         t0 = time()
         while time() < t0 + timeout:
             try:
+                sys.stdout.write('.')
+                sys.stdout.flush()
                 pty_ssh(self.remote, self.port, password, bootstrap)
 
             except PtyProcessError:
@@ -274,6 +277,8 @@ class VM:
                 continue
 
             else:
+                sys.stdout.write(':)\n')
+                sys.stdout.flush()
                 return
 
         raise RuntimeError("VM not up after {} seconds".format(timeout))
