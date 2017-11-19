@@ -161,9 +161,13 @@ class VM:
         else:
             self.config = {}
 
+        self.tcp_ports = [spec.split(':') for spec in self.options.tcp]
+        self.udp_ports = [spec.split(':') for spec in self.options.udp]
+
         self.login = self.config.get('login', DEFAULT_LOGIN)
         self.remote = '{}@localhost'.format(self.login['username'])
         self.port = random.randint(1025, 65535)
+        self.tcp_ports.append((self.port, 22))
 
         self.shares = []
         for i, s in enumerate(self.options.share):
@@ -210,14 +214,13 @@ class VM:
 
         netdev_arg = (
             'user,id=user,net=192.168.1.0/24,hostname=vm-factory'
-            ',hostfwd=tcp:127.0.0.1:{}-:22'.format(self.port)
             + ''.join(
-                ',hostfwd=tcp:127.0.0.1:{}-:{}'.format(*spec.split(':'))
-                for spec in self.options.tcp
+                ',hostfwd=tcp:127.0.0.1:{}-:{}'.format(*pair)
+                for pair in self.tcp_ports
             )
             + ''.join(
-                ',hostfwd=udp:127.0.0.1:{}-:{}'.format(*spec.split(':'))
-                for spec in self.options.udp
+                ',hostfwd=udp:127.0.0.1:{}-:{}'.format(*pair)
+                for pair in self.udp_ports
             )
         )
 
