@@ -291,13 +291,27 @@ class VM:
 
         raise RuntimeError("VM not up after {} seconds".format(timeout))
 
+    def wait_for_qemu_sockets(self, timeout=1):
+        t0 = time()
+        files = [self.var / name for name in ['vm.qmp', 'vm.mon']]
+
+        while time() < t0 + timeout:
+            if all(f.exists() for f in files):
+                break
+            sleep(.1)
+
+        else:
+            raise RuntimeError("VM did not create its sockets")
+
     @contextmanager
     def boot(self):
         with cd(self.var):
             qemu = list(self.qemu_argv())
+            subprocess.Popen(qemu)
+
+            self.wait_for_qemu_sockets()
 
             try:
-                subprocess.Popen(qemu)
                 self.vm_bootstrap()
 
                 yield
