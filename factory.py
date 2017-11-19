@@ -189,7 +189,7 @@ class VM:
             '-f', 'qcow2',
             '-b', str(self.platform_home / 'disk.img'),
             str(local_disk),
-        ], check=True, )
+        ], check=True)
 
     def qemu_argv(self):
         arch = get_arch()
