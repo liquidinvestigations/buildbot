@@ -183,12 +183,12 @@ class VM:
             f.write(SSH_PRIVKEY)
         (self.var / 'id_ed25519').chmod(0o600)
 
-        local_disk = self.var / 'local-disk.img'
+        self.local_disk = self.var / 'local-disk.img'
         subprocess.run([
             'qemu-img', 'create', '-q',
             '-f', 'qcow2',
             '-b', str(self.platform_home / 'disk.img'),
-            str(local_disk),
+            str(self.local_disk),
         ], check=True)
 
     def qemu_argv(self):
@@ -309,6 +309,17 @@ class VM:
         else:
             raise RuntimeError("VM did not create its sockets")
 
+    def save(self, name):
+        new_platform = paths.IMAGES / name
+        new_platform.mkdir()
+
+        echo_run([
+            'qemu-img', 'convert',
+            '-O', 'qcow2',
+            str(self.local_disk),
+            str(new_platform / 'disk.img'),
+        ])
+
     @contextmanager
     def boot(self):
         with cd(self.var):
@@ -322,6 +333,9 @@ class VM:
                     self.vm_bootstrap()
 
                 yield
+
+                if self.options.save:
+                    self.save(self.options.save)
 
             finally:
                 kill_qemu_via_qmp('vm.qmp')
@@ -362,6 +376,7 @@ def add_vm_arguments(parser):
     parser.add_argument('--udp', action='append', default=[])
     parser.add_argument('--vnc', type=int)
     parser.add_argument('--cdrom', action='append', default=[])
+    parser.add_argument('--save')
 
 
 def run_factory(platform, *args):
