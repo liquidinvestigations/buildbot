@@ -133,14 +133,14 @@ DEFAULT_LOGIN = {
 
 
 @contextmanager
-def instance(platform, options):
+def instance(platform, options, use_ssh=True):
     platform_home = paths.IMAGES / platform
 
     if not paths.VAR.is_dir():
         paths.VAR.mkdir()
 
     with TemporaryDirectory(prefix='vm-', dir=str(paths.VAR)) as var:
-        vm = VM(platform_home, Path(var), options)
+        vm = VM(platform_home, Path(var), options, use_ssh)
         vm.setup_var()
 
         with vm.boot():
@@ -149,10 +149,11 @@ def instance(platform, options):
 
 class VM:
 
-    def __init__(self, platform_home, var, options):
+    def __init__(self, platform_home, var, options, use_ssh):
         self.platform_home = platform_home
         self.var = var
         self.options = options
+        self.use_ssh = use_ssh
 
         config_json = self.platform_home / 'config.json'
         if config_json.is_file():
@@ -164,15 +165,19 @@ class VM:
         self.tcp_ports = [spec.split(':') for spec in self.options.tcp]
         self.udp_ports = [spec.split(':') for spec in self.options.udp]
 
-        self.login = self.config.get('login', DEFAULT_LOGIN)
-        self.remote = '{}@localhost'.format(self.login['username'])
-        self.port = random.randint(1025, 65535)
-        self.tcp_ports.append((self.port, 22))
+        if self.use_ssh:
+            self.login = self.config.get('login', DEFAULT_LOGIN)
+            self.remote = '{}@localhost'.format(self.login['username'])
+            self.port = random.randint(1025, 65535)
+            self.tcp_ports.append((self.port, 22))
 
-        self.shares = []
-        for i, s in enumerate(self.options.share):
-            (path, mountpoint) = s.split(':')
-            self.shares.append((i, Path(path).resolve(), mountpoint))
+            self.shares = []
+            for i, s in enumerate(self.options.share):
+                (path, mountpoint) = s.split(':')
+                self.shares.append((i, Path(path).resolve(), mountpoint))
+
+        else:
+            assert not self.options.share
 
     def setup_var(self):
         with (self.var / 'id_ed25519').open('w', encoding='latin1') as f:
@@ -241,13 +246,14 @@ class VM:
             '-drive', disk,
         ]
 
-        for i, path, _ in self.shares:
-            yield from [
-                '-fsdev', 'local,id=fsdev{i},security_model=none,path={path}'
-                    .format(i=i, path=path),
-                '-device', 'virtio-9p-pci,fsdev=fsdev{i},mount_tag=path{i}'
-                    .format(i=i),
-            ]
+        if self.use_ssh:
+            for i, path, _ in self.shares:
+                yield from [
+                    '-fsdev', 'local,id=fsdev{i},security_model=none,path={path}'
+                        .format(i=i, path=path),
+                    '-device', 'virtio-9p-pci,fsdev=fsdev{i},mount_tag=path{i}'
+                        .format(i=i),
+                ]
 
         if self.options.vnc:
             assert 5900 <= self.options.vnc <= 5999
@@ -312,7 +318,8 @@ class VM:
             self.wait_for_qemu_sockets()
 
             try:
-                self.vm_bootstrap()
+                if self.use_ssh:
+                    self.vm_bootstrap()
 
                 yield
 
@@ -322,6 +329,10 @@ class VM:
     @staticmethod
     def invoke_ssh(cmd):
         subprocess.run(cmd, check=True)
+
+    @staticmethod
+    def invoke_console(socket_path):
+        subprocess.run(['socat', '-,cfmakeraw,escape=0xf', str(socket_path)])
 
     def ssh(self, cmd=None):
         ssh_command = [
@@ -338,6 +349,9 @@ class VM:
             ssh_command.append(cmd)
 
         self.invoke_ssh(ssh_command)
+
+    def console(self):
+        self.invoke_console(self.var / 'vm.mon')
 
 
 def add_vm_arguments(parser):
@@ -368,6 +382,15 @@ def login(platform, *args):
 
     with instance(platform, options) as vm:
         vm.ssh()
+
+
+def console(platform, *args):
+    parser = ArgumentParser()
+    add_vm_arguments(parser)
+    options = parser.parse_args(args)
+
+    with instance(platform, options, use_ssh=False) as vm:
+        vm.console()
 
 
 CLOUD_INIT_YML = """\
@@ -522,6 +545,7 @@ def prepare_cloud_image(platform, *args):
 COMMANDS = {
     'run': run_factory,
     'login': login,
+    'console': console,
     'prepare-cloud-image': prepare_cloud_image,
 }
 
