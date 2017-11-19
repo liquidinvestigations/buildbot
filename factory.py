@@ -235,7 +235,7 @@ class VM:
         ]
 
         disk = (
-            'if=none,id=drive0,snapshot=off,discard=unmap,detect-zeroes=unmap,'
+            'if=none,id=drive0,discard=unmap,detect-zeroes=unmap,'
             'file={}/local-disk.img'
             .format(self.var)
         )
