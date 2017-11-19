@@ -231,7 +231,7 @@ class VM:
 
         yield from [
             '-netdev', netdev_arg,
-            '-device', 'virtio-net-pci,netdev=user',
+            '-device', 'virtio-net-pci,netdev=user,romfile=',
         ]
 
         disk = (

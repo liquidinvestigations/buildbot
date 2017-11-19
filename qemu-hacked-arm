@@ -15,12 +15,5 @@ hacked_params = re.sub(
     params,
 )
 
-# this is needed for rock64 and works on the odroid_c2
-hacked_params = re.sub(
-    r'virtio-net-pci,netdev=user',
-    r'virtio-net-pci,netdev=user,romfile=',
-    hacked_params,
-)
-
 hacked_argv = ('/usr/bin/qemu-system-aarch64 -M virt ' + hacked_params).split()
 os.execv(hacked_argv[0], hacked_argv)
