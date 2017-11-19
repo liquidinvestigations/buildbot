@@ -246,6 +246,11 @@ class VM:
                     .format(i=i),
             ]
 
+        if self.options.vnc:
+            assert 5900 <= self.options.vnc <= 5999
+            display = self.options.vnc - 5900
+            yield from ['-display', 'vnc=localhost:{}'.format(display)]
+
     def vm_bootstrap_commands(self):
         yield from [
             'mkdir -p ~/.ssh',
@@ -324,6 +329,7 @@ def add_vm_arguments(parser):
     parser.add_argument('-p', '--smp', default=1, type=int)
     parser.add_argument('--tcp', action='append', default=[])
     parser.add_argument('--udp', action='append', default=[])
+    parser.add_argument('--vnc', type=int)
 
 
 def run_factory(platform, *args):

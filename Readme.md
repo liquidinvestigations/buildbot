@@ -79,3 +79,9 @@ Both modes support the following options:
     ```
     ./factory login --udp 1053:53
     ```
+
+* `--vnc`: open a VNC server. The port number must be between 5900 and 5999.
+
+    ```
+    ./factory login --vnc 5900
+    ```
