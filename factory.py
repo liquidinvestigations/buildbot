@@ -43,7 +43,6 @@ class Paths:
         self.repo = repo
         self.IMAGES = repo / 'images'
         self.VAR = repo / 'var'
-        self.QEMU_HACKED_ARM = code_repo / 'qemu-hacked-arm'
 
 
 code_repo = Path(__file__).resolve().parent
@@ -196,9 +195,6 @@ class VM:
         arch = get_arch()
         qemu_binary = 'qemu-system-{}'.format(arch)
 
-        if arch == 'aarch64':
-            qemu_binary = str(paths.QEMU_HACKED_ARM)
-
         yield from [
             qemu_binary,
             '-daemonize',
@@ -214,6 +210,7 @@ class VM:
 
         if arch == 'aarch64':
             yield from [
+                '-M', 'virt',
                 '-bios', str(self.platform_home / 'arm-bios.fd'),
             ]
 
