@@ -260,6 +260,8 @@ class VM:
             display = self.options.vnc - 5900
             yield from ['-display', 'vnc=localhost:{}'.format(display)]
 
+        yield from self.config.get('qemu-args', [])
+
     def vm_bootstrap_commands(self):
         yield from [
             'mkdir -p ~/.ssh',
