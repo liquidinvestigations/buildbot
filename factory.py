@@ -286,10 +286,10 @@ class VM:
     @contextmanager
     def boot(self):
         with cd(self.var):
-            try:
-                qemu = list(self.qemu_argv())
-                subprocess.Popen(qemu)
+            qemu = list(self.qemu_argv())
 
+            try:
+                subprocess.Popen(qemu)
                 self.vm_bootstrap()
 
                 yield
