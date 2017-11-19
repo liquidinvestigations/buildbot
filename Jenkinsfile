@@ -14,9 +14,12 @@ parallel(
         stage('X86_64: Run the test suite') {
           sh 'virtualenv -p python3 venv'
           sh './venv/bin/python ./venv/bin/pip install -r requirements.txt'
-          sh './venv/bin/python ./venv/bin/pytest'
+          sh './venv/bin/python ./venv/bin/pytest --junitxml x86_64-results.xml'
         }
       } finally {
+          if (fileExists('x86_64-results.xml')) {
+            junit 'x86_64-results.xml'
+          }
         deleteDir()
       }
     }
@@ -52,9 +55,12 @@ parallel(
         stage('ARM64: Run the test suite') {
           sh 'virtualenv -p python3 venv'
           sh './venv/bin/python ./venv/bin/pip install -r requirements.txt'
-          sh './venv/bin/python ./venv/bin/pytest'
+          sh './venv/bin/python ./venv/bin/pytest --junitxml arm64-results.xml'
         }
       } finally {
+          if (fileExists('arm64-results.xml')) {
+            junit 'arm64-results.xml'
+          }
           deleteDir()
       }
     }
