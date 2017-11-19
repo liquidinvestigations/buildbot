@@ -243,6 +243,9 @@ class VM:
             '-drive', disk,
         ]
 
+        for path in self.options.cdrom:
+            yield from ['-drive', 'file={},media=cdrom'.format(path)]
+
         if self.use_ssh:
             for i, path, _ in self.shares:
                 yield from [
@@ -358,6 +361,7 @@ def add_vm_arguments(parser):
     parser.add_argument('--tcp', action='append', default=[])
     parser.add_argument('--udp', action='append', default=[])
     parser.add_argument('--vnc', type=int)
+    parser.add_argument('--cdrom', action='append', default=[])
 
 
 def run_factory(platform, *args):
