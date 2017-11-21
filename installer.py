@@ -31,8 +31,8 @@ def main():
 
     sh('git clone {github} {repo}'.format(**vars))
     sh('cd {repo}'.format(**vars))
-    sh('mkdir -p images/cloud-{arch}'.format(**vars))
-    sh('cd images/cloud-{arch}; '
+    sh('mkdir -p {repo}/images/cloud-{arch}'.format(**vars))
+    sh('cd {repo}/images/cloud-{arch}; '
        'wget -q {image} -O tmp.tar.xz; '
        'xzcat tmp.tar.xz | tar x; '
        'rm tmp.tar.xz'.format(**vars))
