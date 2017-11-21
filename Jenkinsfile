@@ -55,7 +55,8 @@ parallel(
       checkout scm
       try {
         stage('X86_64: Run the installer') {
-          sh 'python3 <(cat install.py) installertarget'
+          sh "#!/bin/bash\n" +
+             "python3 <(cat install.py) installertarget"
         }
         stage('X86_64: Test the installed image') {
           sh './installertarget/factory run true'
@@ -116,7 +117,8 @@ parallel(
       checkout scm
       try {
         stage('ARM64: Run the installer') {
-          sh 'python3 <(cat install.py) installertarget'
+          sh "#!/bin/bash\n" +
+             "python3 <(cat install.py) installertarget"
         }
         stage('ARM64: Test the installed image') {
           sh './installertarget/factory run true'
