@@ -67,7 +67,14 @@ def cd(path):
 
 def kill_qemu_via_qmp(qmp_path):
     qmp = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    qmp.connect(qmp_path)
+
+    try:
+        qmp.connect(qmp_path)
+
+    except ConnectionRefusedError:
+        # qemu already quit, great!
+        return
+
     # https://wiki.qemu.org/Documentation/QMP
     qmp.sendall(b'{"execute": "qmp_capabilities"}\n')
     qmp.sendall(b'{"execute": "quit"}\n')
