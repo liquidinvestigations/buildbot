@@ -16,6 +16,8 @@ def main():
         .decode('latin1')
         .strip()
     )
+    if arch == 'aarch64':
+        arch = 'arm64'
 
     vars = {
         'github': 'https://github.com/liquidinvestigations/factory',
