@@ -85,3 +85,9 @@ Both modes support the following options:
     ```
     ./factory login --vnc 5900
     ```
+
+* `--save`: after the VM quits, save its disk image as a new platform.
+
+    ```
+    ./factory run --save builder apt install build-essential -y
+    ```
