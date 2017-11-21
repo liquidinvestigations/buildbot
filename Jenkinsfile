@@ -65,7 +65,7 @@ parallel(
         deleteDir()
       }
     }
-  }
+  },
 
   arm64_test: {
     node('arm64') {
@@ -126,7 +126,7 @@ parallel(
         deleteDir()
       }
     }
-  }
+  },
 
   failFast: true
 )
