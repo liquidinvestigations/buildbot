@@ -47,6 +47,23 @@ parallel(
     }
   },
 
+  x86_64_installer: {
+    node('cloud') {
+      deleteDir()
+      checkout scm
+      try {
+        stage('X86_64: Run the installer') {
+          sh 'python3 <(cat installer.py) installertarget'
+        }
+        stage('X86_64: Test the installed image') {
+          sh './installertarget/factory run true'
+        }
+      } finally {
+        deleteDir()
+      }
+    }
+  }
+
   arm64_test: {
     node('arm64') {
       deleteDir()
@@ -87,6 +104,23 @@ parallel(
       }
     }
   },
+
+  arm64_installer: {
+    node('arm64') {
+      deleteDir()
+      checkout scm
+      try {
+        stage('ARM64: Run the installer') {
+          sh 'python3 <(cat installer.py) installertarget'
+        }
+        stage('ARM64: Test the installed image') {
+          sh './installertarget/factory run true'
+        }
+      } finally {
+        deleteDir()
+      }
+    }
+  }
 
   failFast: true
 )

@@ -5,22 +5,20 @@ based on [Ubuntu Cloud Images](https://cloud-images.ubuntu.com). It supports
 the `x86_64` and `aarch64` architectures.
 
 ### Setup
-
 Install factory and its dependencies (assumes Ubuntu 16.04):
 
 ```shell
-$ sudo apt install -y wget cloud-utils qemu-kvm genisoimage
-$ git clone https://github.com/liquidinvestigations/factory
-$ cd factory
-$ ./factory prepare-cloud-image
+$ sudo apt install -y wget qemu-kvm
+$ python3 <(curl -sL https://github.com/liquidinvestigations/factory/raw/master/install.py) factory
+$ ./factory echo hello world
 ```
 
-By default, factory will download and cache original Ubuntu cloud images in
-`~/.factory`, but you can set another path with the `--db` argument.
 
-Available platforms for `prepare_cloud_image.py`:
-- `cloud-x86_64` (available only on `x86_64` hosts)
-- `cloud-arm64` (available only on `aarch64` hosts)
+### Building base imagse
+The installer described above downloads a pre-built cloud image, but you can
+build one yourself:
+
+$ ./factory prepare-cloud-image
 
 
 ### Usage
