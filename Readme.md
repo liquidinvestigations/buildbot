@@ -89,3 +89,74 @@ Both modes support the following options:
     ```
     ./factory run --commit apt install build-essential -y
     ```
+
+### Windows
+Factory is mainly designed to run automated jobs in headless cloud VMs, but
+with a bit of creative invocation, it can run windows! First let's create a
+blank image.
+
+```shell
+./factory create win8 --size 64G
+echo '{"qemu-args": ["-usbdevice", "tablet"]}' > images/win8/config.json
+```
+
+The second line is a fix to correlate mouse movement over VNC.
+
+Then, get a hold of an ISO for Windows, we'll call it `windows8.iso` because I
+tested on Windows 8. Also download [virtio-win.iso][] because it contains
+essential drivers.
+
+[virtio-win.iso]: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso
+
+Let's boot the VM and install windows!
+
+```shell
+./factory console --image win8 --cdrom windows8.iso --cdrom virtio-win.iso --vnc 5901 --commit
+```
+
+Use a VNC client (e.g. [RealVNC][]) to connect to localhost port 5901. It
+should open the VM's display which should show the Windows installer.
+
+[RealVNC]: https://www.realvnc.com/download/viewer/
+
+The installer won't detect the disk until you manually load drivers from the
+`virtio-win` cdrom. Then proceed with the installation normally and boot into
+your new account. If you want internet access, you must install the network
+drivers from the same `virtio-win` cdrom.
+
+When you're happy with your installation, shut down the windows. The `./factory
+console` you invoked before should ask you:
+
+```
+Waiting for the VM to shut down ...
+Commit? [Y/n]:
+```
+
+Press enter and your VM's hard drive will be saved.
+
+Now is a good time to back up this image:
+
+```shell
+./factory export win8 | gzip -1 > win8-fresh-install.tgz
+```
+
+We can always import it later:
+```shell
+zcat win8-fresh-install.tgz | ./factory import win8-restored
+```
+
+Now let's run windows, even give it more resources:
+
+```shell
+./factory console --image win8 --smp 2 --memory 4096 --commit
+```
+
+When the VM shuts down, you can choose to save the VM's changes on disk, or
+discard them. Omit the `--commit` flag to skip the prompt and always discard.
+
+When you're done with an image, e.g. because you want to restore it from
+backup, simply remove its folder from `images`:
+
+```shell
+rm -r images/win8
+```
