@@ -39,13 +39,11 @@ and it's destroyed as soon as the command/login finishes.
     ./factory run whoami
     ```
 
-Common options, before the `login` or `run` command:
+Both modes support the following options:
 
-* `--platform`: name of directory under `images` that is used to boot the image
+* `--image`: name of directory under `images` that is used to boot the image
   named `disk.img`, reading login settings from `config.json`. Defaults to
   `cloud-$ARCHITECTURE`, the image created by the `prepare-cloud-image` command
-
-Both modes support the following options:
 
 * `--share`: share a folder with the VM. Can be used multiple times. The first
   path is the local path, the second is the mount point inside the VM.

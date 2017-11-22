@@ -157,7 +157,7 @@ def instance(platform, options, use_ssh=True):
 class VM:
 
     def __init__(self, platform, options, use_ssh):
-        self.platform_home = paths.IMAGES / platform
+        self.platform_home = paths.IMAGES / (options.image or platform)
         self.options = options
         self.use_ssh = use_ssh
 
@@ -405,6 +405,7 @@ class VM:
 
 
 def add_vm_arguments(parser):
+    parser.add_argument('-i', '--image', default=DEFAULTS[get_arch()])
     parser.add_argument('--share', action='append', default=[])
     parser.add_argument('-m', '--memory', default=512, type=int)
     parser.add_argument('-p', '--smp', default=1, type=int)
