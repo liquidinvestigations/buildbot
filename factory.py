@@ -448,6 +448,22 @@ def console(platform, *args):
         vm.console()
 
 
+def create_image(_, *args):
+    parser = ArgumentParser()
+    parser.add_argument('image')
+    parser.add_argument('--size', default='8G')
+    options = parser.parse_args(args)
+    image_dir = paths.IMAGES / options.image
+    image_dir.mkdir()
+    disk_img = image_dir / 'disk.img'
+    echo_run([
+        'qemu-img', 'create',
+        '-f', 'qcow2',
+        str(disk_img),
+        options.size,
+    ])
+
+
 def export_image(_, *args):
     image_list = [x.name for x in paths.IMAGES.iterdir() if x.is_dir()]
     parser = ArgumentParser()
@@ -626,6 +642,7 @@ COMMANDS = {
     'login': login,
     'console': console,
     'prepare-cloud-image': prepare_cloud_image,
+    'create': create_image,
     'export': export_image,
     'import': import_image,
 }
