@@ -443,6 +443,30 @@ def console(platform, *args):
         vm.console()
 
 
+def export_image(_, *args):
+    image_list = [x.name for x in paths.IMAGES.iterdir() if x.is_dir()]
+    parser = ArgumentParser()
+    parser.add_argument('image', choices=image_list)
+    options = parser.parse_args(args)
+
+    image_dir = paths.IMAGES / options.image
+
+    with cd(image_dir):
+        subprocess.run(['tar', 'c', '.'], check=True)
+
+
+def import_image(_, *args):
+    parser = ArgumentParser()
+    parser.add_argument('image')
+    options = parser.parse_args(args)
+
+    image_dir = paths.IMAGES / options.image
+    image_dir.mkdir()
+
+    with cd(image_dir):
+        subprocess.run(['tar', 'x'], check=True)
+
+
 CLOUD_INIT_YML = """\
 #cloud-config
 password: ubuntu
@@ -597,6 +621,8 @@ COMMANDS = {
     'login': login,
     'console': console,
     'prepare-cloud-image': prepare_cloud_image,
+    'export': export_image,
+    'import': import_image,
 }
 
 DEFAULTS = {
