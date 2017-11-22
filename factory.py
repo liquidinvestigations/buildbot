@@ -410,7 +410,7 @@ def add_vm_arguments(parser):
     parser.add_argument('-i', '--image', default=DEFAULTS[get_arch()])
     parser.add_argument('--share', action='append', default=[])
     parser.add_argument('-m', '--memory', default=512, type=int)
-    parser.add_argument('-p', '--smp', default=1, type=int)
+    parser.add_argument('-s', '--smp', default=1, type=int)
     parser.add_argument('--tcp', action='append', default=[])
     parser.add_argument('--udp', action='append', default=[])
     parser.add_argument('--vnc', type=int)
