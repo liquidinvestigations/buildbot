@@ -65,13 +65,21 @@ def cd(path):
     finally:
         os.chdir(prev)
 
-def kill_qemu_via_qmp(qmp_path):
-    qmp = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 
+def open_qmp(qmp_path):
+    qmp = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
         qmp.connect(qmp_path)
-
     except ConnectionRefusedError:
+        return None
+    else:
+        return qmp
+
+
+def kill_qemu_via_qmp(qmp_path):
+    qmp = open_qmp(qmp_path)
+
+    if not qmp:
         # qemu already quit, great!
         return
 
@@ -318,16 +326,27 @@ class VM:
         else:
             raise RuntimeError("VM did not create its sockets")
 
-    def save(self, name):
-        new_platform = paths.IMAGES / name
-        new_platform.mkdir()
+    def shutdown(self, timeout=15):
+        if self.use_ssh:
+            try:
+                self.ssh('sudo poweroff')
+            except:
+                pass
 
-        echo_run([
-            'qemu-img', 'convert',
-            '-O', 'qcow2',
-            str(self.local_disk),
-            str(new_platform / 'disk.img'),
-        ])
+        print("Waiting for the VM to shut down ...")
+        t0 = time()
+        while time() < t0 + timeout:
+            if open_qmp('vm.qmp') is None:
+                # the socket is dead, so the VM must have stopped
+                break
+            print('.', end='', flush=True)
+            sleep(.2)
+
+        else:
+            raise RuntimeError("VM did not shut down normally")
+
+    def commit(self):
+        echo_run(['qemu-img', 'commit', str(self.local_disk)])
 
     @contextmanager
     def boot(self):
@@ -343,8 +362,14 @@ class VM:
 
                 yield
 
-                if self.options.save:
-                    self.save(self.options.save)
+                if self.options.commit:
+                    self.shutdown()
+
+                    if input("\nCommit? [Y/n]: ").strip().lower() in ['', 'y']:
+                        self.commit()
+
+                    else:
+                        print("Aborting commit")
 
             finally:
                 kill_qemu_via_qmp('vm.qmp')
@@ -385,7 +410,7 @@ def add_vm_arguments(parser):
     parser.add_argument('--udp', action='append', default=[])
     parser.add_argument('--vnc', type=int)
     parser.add_argument('--cdrom', action='append', default=[])
-    parser.add_argument('--save')
+    parser.add_argument('--commit', action='store_true')
 
 
 def run_factory(platform, *args):
