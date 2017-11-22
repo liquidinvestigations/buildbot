@@ -171,6 +171,8 @@ class VM:
         self.tcp_ports = [spec.split(':') for spec in self.options.tcp]
         self.udp_ports = [spec.split(':') for spec in self.options.udp]
 
+        self.cdrom_paths = [Path(p).resolve() for p in self.options.cdrom]
+
         if self.use_ssh:
             self.login = self.config.get('login', DEFAULT_LOGIN)
             self.remote = '{}@localhost'.format(self.login['username'])
@@ -260,7 +262,7 @@ class VM:
             '-drive', disk,
         ]
 
-        for path in self.options.cdrom:
+        for path in self.cdrom_paths:
             yield from ['-drive', 'file={},media=cdrom'.format(path)]
 
         if self.use_ssh:
