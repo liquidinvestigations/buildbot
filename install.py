@@ -33,7 +33,6 @@ def main():
     }
 
     sh('git clone {github} {repo}'.format(**vars))
-    sh('cd {repo}'.format(**vars))
     sh('mkdir -p {repo}/images/cloud-{arch}'.format(**vars))
     os.chdir('{repo}/images/cloud-{arch}'.format(**vars))
     sh('wget -q {image} -O tmp.tar.xz'.format(**vars))
