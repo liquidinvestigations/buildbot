@@ -148,24 +148,16 @@ DEFAULT_LOGIN = {
 
 @contextmanager
 def instance(platform, options, use_ssh=True):
-    platform_home = paths.IMAGES / platform
-
-    if not paths.VAR.is_dir():
-        paths.VAR.mkdir()
-
-    with TemporaryDirectory(prefix='vm-', dir=str(paths.VAR)) as var:
-        vm = VM(platform_home, Path(var), options, use_ssh)
-        vm.setup_var()
-
+    vm = VM(platform, options, use_ssh)
+    with vm.var_folder():
         with vm.boot():
             yield vm
 
 
 class VM:
 
-    def __init__(self, platform_home, var, options, use_ssh):
-        self.platform_home = platform_home
-        self.var = var
+    def __init__(self, platform, options, use_ssh):
+        self.platform_home = paths.IMAGES / platform
         self.options = options
         self.use_ssh = use_ssh
 
@@ -205,6 +197,16 @@ class VM:
             '-b', str(self.platform_home / 'disk.img'),
             str(self.local_disk),
         ], check=True)
+
+    @contextmanager
+    def var_folder(self):
+        if not paths.VAR.is_dir():
+            paths.VAR.mkdir()
+
+        with TemporaryDirectory(prefix='vm-', dir=str(paths.VAR)) as var:
+            self.var = Path(var)
+            self.setup_var()
+            yield
 
     def qemu_argv(self):
         arch = get_arch()
