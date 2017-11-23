@@ -8,7 +8,7 @@ the `x86_64` and `aarch64` architectures.
 Install factory and its dependencies (assumes Ubuntu 16.04):
 
 ```shell
-$ sudo apt install -y wget qemu-kvm qemu-utils xz-utils
+$ sudo apt install -y wget qemu-kvm qemu-utils xz-utils socat
 $ python3 <(curl -sL https://github.com/liquidinvestigations/factory/raw/master/install.py) factory
 $ cd factory
 $ ./factory echo hello world
