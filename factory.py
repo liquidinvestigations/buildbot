@@ -43,7 +43,6 @@ class Paths:
         self.repo = repo
         self.IMAGES = repo / 'images'
         self.VAR = repo / 'var'
-        self.QEMU_HACKED_ARM = code_repo / 'qemu-hacked-arm'
 
 
 code_repo = Path(__file__).resolve().parent
@@ -66,9 +65,24 @@ def cd(path):
     finally:
         os.chdir(prev)
 
-def kill_qemu_via_qmp(qmp_path):
+
+def open_qmp(qmp_path):
     qmp = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    qmp.connect(qmp_path)
+    try:
+        qmp.connect(qmp_path)
+    except ConnectionRefusedError:
+        return None
+    else:
+        return qmp
+
+
+def kill_qemu_via_qmp(qmp_path):
+    qmp = open_qmp(qmp_path)
+
+    if not qmp:
+        # qemu already quit, great!
+        return
+
     # https://wiki.qemu.org/Documentation/QMP
     qmp.sendall(b'{"execute": "qmp_capabilities"}\n')
     qmp.sendall(b'{"execute": "quit"}\n')
@@ -133,26 +147,19 @@ DEFAULT_LOGIN = {
 
 
 @contextmanager
-def instance(platform, options):
-    platform_home = paths.IMAGES / platform
-
-    if not paths.VAR.is_dir():
-        paths.VAR.mkdir()
-
-    with TemporaryDirectory(prefix='vm-', dir=str(paths.VAR)) as var:
-        vm = VM(platform_home, Path(var), options)
-        vm.setup_var()
-
+def instance(platform, options, use_ssh=True):
+    vm = VM(platform, options, use_ssh)
+    with vm.var_folder():
         with vm.boot():
             yield vm
 
 
 class VM:
 
-    def __init__(self, platform_home, var, options):
-        self.platform_home = platform_home
-        self.var = var
+    def __init__(self, platform, options, use_ssh):
+        self.platform_home = paths.IMAGES / (options.image or platform)
         self.options = options
+        self.use_ssh = use_ssh
 
         config_json = self.platform_home / 'config.json'
         if config_json.is_file():
@@ -161,34 +168,51 @@ class VM:
         else:
             self.config = {}
 
-        self.login = self.config.get('login', DEFAULT_LOGIN)
-        self.remote = '{}@localhost'.format(self.login['username'])
-        self.port = random.randint(1025, 65535)
+        self.tcp_ports = [spec.split(':') for spec in self.options.tcp]
+        self.udp_ports = [spec.split(':') for spec in self.options.udp]
 
-        self.shares = []
-        for i, s in enumerate(self.options.share):
-            (path, mountpoint) = s.split(':')
-            self.shares.append((i, Path(path).resolve(), mountpoint))
+        self.cdrom_paths = [Path(p).resolve() for p in self.options.cdrom]
+
+        if self.use_ssh:
+            self.login = self.config.get('login', DEFAULT_LOGIN)
+            self.remote = '{}@localhost'.format(self.login['username'])
+            self.port = random.randint(1025, 65535)
+            self.tcp_ports.append((self.port, 22))
+
+            self.shares = []
+            for i, s in enumerate(self.options.share):
+                (path, mountpoint) = s.split(':')
+                self.shares.append((i, Path(path).resolve(), mountpoint))
+
+        else:
+            assert not self.options.share
 
     def setup_var(self):
         with (self.var / 'id_ed25519').open('w', encoding='latin1') as f:
             f.write(SSH_PRIVKEY)
         (self.var / 'id_ed25519').chmod(0o600)
 
-        local_disk = self.var / 'local-disk.img'
+        self.local_disk = self.var / 'local-disk.img'
         subprocess.run([
             'qemu-img', 'create', '-q',
             '-f', 'qcow2',
             '-b', str(self.platform_home / 'disk.img'),
-            str(local_disk),
-        ], check=True, )
+            str(self.local_disk),
+        ], check=True)
+
+    @contextmanager
+    def var_folder(self):
+        if not paths.VAR.is_dir():
+            paths.VAR.mkdir()
+
+        with TemporaryDirectory(prefix='vm-', dir=str(paths.VAR)) as var:
+            self.var = Path(var)
+            self.setup_var()
+            yield
 
     def qemu_argv(self):
         arch = get_arch()
         qemu_binary = 'qemu-system-{}'.format(arch)
-
-        if arch == 'aarch64':
-            qemu_binary = str(paths.QEMU_HACKED_ARM)
 
         yield from [
             qemu_binary,
@@ -205,29 +229,29 @@ class VM:
 
         if arch == 'aarch64':
             yield from [
+                '-M', 'virt',
                 '-bios', str(self.platform_home / 'arm-bios.fd'),
             ]
 
         netdev_arg = (
             'user,id=user,net=192.168.1.0/24,hostname=vm-factory'
-            ',hostfwd=tcp:127.0.0.1:{}-:22'.format(self.port)
             + ''.join(
-                ',hostfwd=tcp:127.0.0.1:{}-:{}'.format(*spec.split(':'))
-                for spec in self.options.tcp
+                ',hostfwd=tcp:127.0.0.1:{}-:{}'.format(*pair)
+                for pair in self.tcp_ports
             )
             + ''.join(
-                ',hostfwd=udp:127.0.0.1:{}-:{}'.format(*spec.split(':'))
-                for spec in self.options.udp
+                ',hostfwd=udp:127.0.0.1:{}-:{}'.format(*pair)
+                for pair in self.udp_ports
             )
         )
 
         yield from [
             '-netdev', netdev_arg,
-            '-device', 'virtio-net-pci,netdev=user',
+            '-device', 'virtio-net-pci,netdev=user,romfile=',
         ]
 
         disk = (
-            'if=none,id=drive0,snapshot=off,discard=unmap,detect-zeroes=unmap,'
+            'if=none,id=drive0,discard=unmap,detect-zeroes=unmap,'
             'file={}/local-disk.img'
             .format(self.var)
         )
@@ -238,13 +262,24 @@ class VM:
             '-drive', disk,
         ]
 
-        for i, path, _ in self.shares:
-            yield from [
-                '-fsdev', 'local,id=fsdev{i},security_model=none,path={path}'
-                    .format(i=i, path=path),
-                '-device', 'virtio-9p-pci,fsdev=fsdev{i},mount_tag=path{i}'
-                    .format(i=i),
-            ]
+        for path in self.cdrom_paths:
+            yield from ['-drive', 'file={},media=cdrom'.format(path)]
+
+        if self.use_ssh:
+            for i, path, _ in self.shares:
+                yield from [
+                    '-fsdev', 'local,id=fsdev{i},security_model=none,path={path}'
+                        .format(i=i, path=path),
+                    '-device', 'virtio-9p-pci,fsdev=fsdev{i},mount_tag=path{i}'
+                        .format(i=i),
+                ]
+
+        if self.options.vnc:
+            assert 5900 <= self.options.vnc <= 5999
+            display = self.options.vnc - 5900
+            yield from ['-display', 'vnc=localhost:{}'.format(display)]
+
+        yield from self.config.get('qemu-args', [])
 
     def vm_bootstrap_commands(self):
         yield from [
@@ -283,16 +318,67 @@ class VM:
 
         raise RuntimeError("VM not up after {} seconds".format(timeout))
 
+    def wait_for_qemu_sockets(self, timeout=1):
+        t0 = time()
+        files = [self.var / name for name in ['vm.qmp', 'vm.mon']]
+
+        while time() < t0 + timeout:
+            if all(f.exists() for f in files):
+                break
+            sleep(.1)
+
+        else:
+            raise RuntimeError("VM did not create its sockets")
+
+    def shutdown(self, timeout=15):
+        if self.use_ssh:
+            try:
+                self.ssh('sudo poweroff')
+            except:
+                pass
+
+        print("Waiting for the VM to shut down ...")
+        t0 = time()
+        while time() < t0 + timeout:
+            if open_qmp('vm.qmp') is None:
+                # the socket is dead, so the VM must have stopped
+                print()
+                break
+            print('.', end='', flush=True)
+            sleep(.2)
+
+        else:
+            raise RuntimeError("VM did not shut down normally")
+
+    def commit(self):
+        echo_run(['qemu-img', 'commit', str(self.local_disk)])
+
     @contextmanager
     def boot(self):
         with cd(self.var):
-            try:
-                qemu = list(self.qemu_argv())
-                subprocess.Popen(qemu)
+            qemu = list(self.qemu_argv())
+            subprocess.Popen(qemu)
 
-                self.vm_bootstrap()
+            self.wait_for_qemu_sockets()
+
+            try:
+                if self.use_ssh:
+                    self.vm_bootstrap()
 
                 yield
+
+                if self.options.commit:
+                    self.shutdown()
+
+                    def confirm_commit():
+                        text = input("Commit? [Y/n]: ")
+                        return text.strip().lower() in ['', 'y']
+
+                    if self.options.yes or confirm_commit():
+                        self.commit()
+
+                    else:
+                        print("Aborting commit")
 
             finally:
                 kill_qemu_via_qmp('vm.qmp')
@@ -300,6 +386,10 @@ class VM:
     @staticmethod
     def invoke_ssh(cmd):
         subprocess.run(cmd, check=True)
+
+    @staticmethod
+    def invoke_console(socket_path):
+        subprocess.run(['socat', '-,cfmakeraw,escape=0xf', str(socket_path)])
 
     def ssh(self, cmd=None):
         ssh_command = [
@@ -317,13 +407,21 @@ class VM:
 
         self.invoke_ssh(ssh_command)
 
+    def console(self):
+        self.invoke_console(self.var / 'vm.mon')
+
 
 def add_vm_arguments(parser):
+    parser.add_argument('-i', '--image', default=DEFAULTS[get_arch()])
     parser.add_argument('--share', action='append', default=[])
     parser.add_argument('-m', '--memory', default=512, type=int)
-    parser.add_argument('-p', '--smp', default=1, type=int)
+    parser.add_argument('-s', '--smp', default=1, type=int)
     parser.add_argument('--tcp', action='append', default=[])
     parser.add_argument('--udp', action='append', default=[])
+    parser.add_argument('--vnc', type=int)
+    parser.add_argument('--cdrom', action='append', default=[])
+    parser.add_argument('--commit', action='store_true')
+    parser.add_argument('-y', '--yes', action='store_true')
 
 
 def run_factory(platform, *args):
@@ -345,6 +443,55 @@ def login(platform, *args):
 
     with instance(platform, options) as vm:
         vm.ssh()
+
+
+def console(platform, *args):
+    parser = ArgumentParser()
+    add_vm_arguments(parser)
+    options = parser.parse_args(args)
+
+    with instance(platform, options, use_ssh=False) as vm:
+        vm.console()
+
+
+def create_image(_, *args):
+    parser = ArgumentParser()
+    parser.add_argument('image')
+    parser.add_argument('--size', default='8G')
+    options = parser.parse_args(args)
+    image_dir = paths.IMAGES / options.image
+    image_dir.mkdir()
+    disk_img = image_dir / 'disk.img'
+    echo_run([
+        'qemu-img', 'create',
+        '-f', 'qcow2',
+        str(disk_img),
+        options.size,
+    ])
+
+
+def export_image(_, *args):
+    image_list = [x.name for x in paths.IMAGES.iterdir() if x.is_dir()]
+    parser = ArgumentParser()
+    parser.add_argument('image', choices=image_list)
+    options = parser.parse_args(args)
+
+    image_dir = paths.IMAGES / options.image
+
+    with cd(image_dir):
+        subprocess.run(['tar', 'c', '.'], check=True)
+
+
+def import_image(_, *args):
+    parser = ArgumentParser()
+    parser.add_argument('image')
+    options = parser.parse_args(args)
+
+    image_dir = paths.IMAGES / options.image
+    image_dir.mkdir()
+
+    with cd(image_dir):
+        subprocess.run(['tar', 'x'], check=True)
 
 
 CLOUD_INIT_YML = """\
@@ -499,7 +646,11 @@ def prepare_cloud_image(platform, *args):
 COMMANDS = {
     'run': run_factory,
     'login': login,
+    'console': console,
     'prepare-cloud-image': prepare_cloud_image,
+    'create': create_image,
+    'export': export_image,
+    'import': import_image,
 }
 
 DEFAULTS = {
