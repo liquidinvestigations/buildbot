@@ -84,10 +84,11 @@ Both modes support the following options:
     ./factory login --vnc 5900
     ```
 
-* `--commit`: after the VM quits, save the changes to its disk.
+* `--commit`: after the VM quits, save the changes to its disk. Add `-y` or
+  `--yes` to skip confirmation.
 
     ```
-    ./factory run --commit apt install build-essential -y
+    ./factory run --commit --yes apt install build-essential -y
     ```
 
 ### Windows

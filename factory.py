@@ -342,6 +342,7 @@ class VM:
         while time() < t0 + timeout:
             if open_qmp('vm.qmp') is None:
                 # the socket is dead, so the VM must have stopped
+                print()
                 break
             print('.', end='', flush=True)
             sleep(.2)
@@ -369,7 +370,11 @@ class VM:
                 if self.options.commit:
                     self.shutdown()
 
-                    if input("\nCommit? [Y/n]: ").strip().lower() in ['', 'y']:
+                    def confirm_commit():
+                        text = input("Commit? [Y/n]: ")
+                        return text.strip().lower() in ['', 'y']
+
+                    if self.options.yes or confirm_commit():
                         self.commit()
 
                     else:
@@ -416,6 +421,7 @@ def add_vm_arguments(parser):
     parser.add_argument('--vnc', type=int)
     parser.add_argument('--cdrom', action='append', default=[])
     parser.add_argument('--commit', action='store_true')
+    parser.add_argument('-y', '--yes', action='store_true')
 
 
 def run_factory(platform, *args):
