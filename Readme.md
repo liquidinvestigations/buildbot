@@ -10,6 +10,7 @@ Install factory and its dependencies (assumes Ubuntu 16.04):
 ```shell
 $ sudo apt install -y wget qemu-kvm qemu-utils xz-utils
 $ python3 <(curl -sL https://github.com/liquidinvestigations/factory/raw/master/install.py) factory
+$ cd factory
 $ ./factory echo hello world
 ```
 
