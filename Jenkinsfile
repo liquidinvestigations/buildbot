@@ -16,7 +16,8 @@ parallel(
           sh './venv/bin/python ./venv/bin/pip install -r requirements.txt'
           sh './venv/bin/python ./venv/bin/pytest --junitxml x86_64-results.xml'
         }
-      } finally {
+      }
+      finally {
           if (fileExists('x86_64-results.xml')) {
             junit 'x86_64-results.xml'
           }
@@ -41,7 +42,27 @@ parallel(
           sh 'xz -0 < cloud-x86_64-image.tar > cloud-x86_64-image.tar.xz'
           archiveArtifacts 'cloud-x86_64-image.tar.xz'
         }
-      } finally {
+      }
+      finally {
+        deleteDir()
+      }
+    }
+  },
+
+  x86_64_installer: {
+    node('cloud') {
+      deleteDir()
+      checkout scm
+      try {
+        stage('X86_64: Run the installer') {
+          sh "#!/bin/bash\n" +
+             "python3 <(cat install.py) installertarget"
+        }
+        stage('X86_64: Test the installed image') {
+          sh './installertarget/factory run true'
+        }
+      }
+      finally {
         deleteDir()
       }
     }
@@ -57,7 +78,8 @@ parallel(
           sh './venv/bin/python ./venv/bin/pip install -r requirements.txt'
           sh './venv/bin/python ./venv/bin/pytest --junitxml arm64-results.xml'
         }
-      } finally {
+      }
+      finally {
           if (fileExists('arm64-results.xml')) {
             junit 'arm64-results.xml'
           }
@@ -82,8 +104,28 @@ parallel(
           sh 'xz -0 < cloud-arm64-image.tar > cloud-arm64-image.tar.xz'
           archiveArtifacts 'cloud-arm64-image.tar.xz'
         }
-      } finally {
+      }
+      finally {
           deleteDir()
+      }
+    }
+  },
+
+  arm64_installer: {
+    node('arm64') {
+      deleteDir()
+      checkout scm
+      try {
+        stage('ARM64: Run the installer') {
+          sh "#!/bin/bash\n" +
+             "python3 <(cat install.py) installertarget"
+        }
+        stage('ARM64: Test the installed image') {
+          sh './installertarget/factory run true'
+        }
+      }
+      finally {
+        deleteDir()
       }
     }
   },
