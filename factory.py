@@ -525,6 +525,7 @@ password: ubuntu
 chpasswd: { expire: False }
 ssh_pwauth: True
 runcmd:
+  - "echo '127.0.1.1 ubuntu' >> /etc/hosts"
   - "touch /etc/cloud/cloud-init.disabled"
   - "systemctl disable apt-daily.service"
   - "systemctl disable apt-daily.timer"
