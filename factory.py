@@ -397,6 +397,7 @@ class VM:
             self.remote,
             '-p', str(self.port),
             '-o', 'UserKnownHostsFile=known_hosts',
+            '-o', 'StrictHostKeyChecking=no',
             '-o', 'ConnectTimeout=1',
             '-o', 'IdentitiesOnly=yes',
             '-i', 'id_ed25519',
