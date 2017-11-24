@@ -252,17 +252,14 @@ class VM:
             '-device', 'virtio-net-pci,netdev=user,romfile=',
         ]
 
-        disk = (
-            'if=none,id=drive0,discard=unmap,detect-zeroes=unmap,'
-            'file={}/local-disk.img'
-            .format(self.var)
-        )
+        def disk_drive(path):
+            return [
+                '-drive',
+                'if=virtio,discard=unmap,detect-zeroes=unmap,file={}'
+                    .format(path),
+            ]
 
-        yield from [
-            '-device', 'virtio-scsi-pci,id=scsi',
-            '-device', 'scsi-hd,drive=drive0',
-            '-drive', disk,
-        ]
+        yield from disk_drive(self.var / 'local-disk.img')
 
         for path in self.cdrom_paths:
             yield from ['-drive', 'file={},media=cdrom'.format(path)]
@@ -275,6 +272,17 @@ class VM:
                     '-device', 'virtio-9p-pci,fsdev=fsdev{i},mount_tag=path{i}'
                         .format(i=i),
                 ]
+
+            if self.options.swap:
+                swap_disk = str(self.var / 'swap.img')
+                subprocess.run([
+                    'qemu-img', 'create', '-q',
+                    '-f', 'qcow2',
+                    swap_disk,
+                    self.options.swap,
+                ], check=True)
+
+                yield from disk_drive(swap_disk)
 
         if self.options.vnc:
             assert 5900 <= self.options.vnc <= 5999
@@ -298,6 +306,12 @@ class VM:
                 'sudo mount -t 9p -o trans=virtio path{} {} -oversion=9p2000.L'
                 .format(i, quoted_mountpoint)
             )
+
+        if self.options.swap:
+            yield from [
+                'sudo mkswap /dev/vdb',
+                'sudo swapon /dev/vdb',
+            ]
 
     def vm_bootstrap(self, timeout=180):
         if self.verbose:
@@ -430,6 +444,7 @@ def add_vm_arguments(parser):
     parser.add_argument('--udp', action='append', default=[])
     parser.add_argument('--vnc', type=int)
     parser.add_argument('--cdrom', action='append', default=[])
+    parser.add_argument('--swap', default='2G')
     parser.add_argument('--commit', action='store_true')
     parser.add_argument('-y', '--yes', action='store_true')
 
@@ -510,9 +525,6 @@ password: ubuntu
 chpasswd: { expire: False }
 ssh_pwauth: True
 runcmd:
-  - "dd if=/dev/zero of=/var/local/swap1 bs=1M count=2048"
-  - "mkswap /var/local/swap1"
-  - "echo '/var/local/swap1 none swap sw 0 0' >> /etc/fstab"
   - "touch /etc/cloud/cloud-init.disabled"
   - "systemctl disable apt-daily.service"
   - "systemctl disable apt-daily.timer"
