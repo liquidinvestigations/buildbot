@@ -221,7 +221,7 @@ class VM:
             '-daemonize',
             '-display', 'none',
             '-chardev', 'socket,id=mon-qmp,path=vm.qmp,server,nowait',
-            '-mon', 'chardev=mon-qmp,mode=control,default',
+            '-mon', 'chardev=mon-qmp,mode=control',
             '-serial', 'mon:unix:path=vm.mon,server,nowait',
             '-m', str(self.options.memory),
             '-enable-kvm',
