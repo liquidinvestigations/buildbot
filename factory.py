@@ -120,6 +120,7 @@ def pty_ssh(remote, port, password, command):
         '-o', 'NumberOfPasswordPrompts=1',
         '-o', 'StrictHostKeyChecking=no',
         '-o', 'UserKnownHostsFile=known_hosts',
+        '-o', 'ConnectTimeout=1',
         command,
     ]
 
