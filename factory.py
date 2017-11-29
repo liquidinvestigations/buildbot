@@ -161,6 +161,7 @@ class VM:
         self.platform_home = paths.IMAGES / (options.image or platform)
         self.options = options
         self.use_ssh = use_ssh
+        self.verbose = options.verbose
 
         config_json = self.platform_home / 'config.json'
         if config_json.is_file():
@@ -299,6 +300,12 @@ class VM:
             )
 
     def vm_bootstrap(self, timeout=60):
+        if self.verbose:
+            console_socat = subprocess.Popen([
+                'socat', '-',
+                str(self.var / 'vm.mon'),
+            ])
+
         password = self.login['password']
         bootstrap = ' && '.join(self.vm_bootstrap_commands())
         t0 = time()
@@ -414,6 +421,7 @@ class VM:
 
 
 def add_vm_arguments(parser):
+    parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('-i', '--image')
     parser.add_argument('--share', action='append', default=[])
     parser.add_argument('-m', '--memory', default=512, type=int)
