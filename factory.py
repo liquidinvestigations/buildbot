@@ -299,7 +299,7 @@ class VM:
                 .format(i, quoted_mountpoint)
             )
 
-    def vm_bootstrap(self, timeout=60):
+    def vm_bootstrap(self, timeout=180):
         if self.verbose:
             console_socat = subprocess.Popen([
                 'socat', '-',
@@ -326,7 +326,7 @@ class VM:
 
         raise RuntimeError("VM not up after {} seconds".format(timeout))
 
-    def wait_for_qemu_sockets(self, timeout=1):
+    def wait_for_qemu_sockets(self, timeout=5):
         t0 = time()
         files = [self.var / name for name in ['vm.qmp', 'vm.mon']]
 
@@ -338,7 +338,7 @@ class VM:
         else:
             raise RuntimeError("VM did not create its sockets")
 
-    def shutdown(self, timeout=15):
+    def shutdown(self, timeout=60):
         if self.use_ssh:
             try:
                 self.ssh('sudo poweroff')
@@ -406,7 +406,7 @@ class VM:
             '-p', str(self.port),
             '-o', 'UserKnownHostsFile=known_hosts',
             '-o', 'StrictHostKeyChecking=no',
-            '-o', 'ConnectTimeout=1',
+            '-o', 'ConnectTimeout=30',
             '-o', 'IdentitiesOnly=yes',
             '-i', 'id_ed25519',
         ]
