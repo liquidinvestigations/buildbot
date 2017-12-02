@@ -14,6 +14,7 @@ import subprocess
 from contextlib import contextmanager
 from argparse import ArgumentParser, REMAINDER
 import shlex
+import logging
 
 """
 reference:
@@ -36,6 +37,13 @@ AAAEBAAQzlJCFP03EyDr5D6ssyBshQ+1dvDYaZFXqkasWEs89QBDGxYk2MjJHMa30Ut166
 SSH_PUBKEY = ('ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM9QBDG'
               'xYk2MjJHMa30Ut166/s61Yk1ieTn3aXjAnnvP factory')
 
+logger = logging.getLogger('factory')
+
+
+def print_progress(text):
+    if logger.level <= logging.INFO:
+        print(text, end='', flush=True, file=sys.stderr)
+
 
 class Paths:
 
@@ -53,7 +61,7 @@ def get_arch():
     return subprocess.check_output(['uname', '-m']).decode('latin1').strip()
 
 def echo_run(cmd):
-    print('+', *cmd)
+    logger.debug('+ ' + ' '.join(cmd))
     subprocess.run(cmd, check=True)
 
 @contextmanager
@@ -136,7 +144,7 @@ def pty_ssh(remote, port, password, command):
 
         while True:
             try:
-                print(os.read(fd, 1024))
+                print_progress('{}\n'.format(os.read(fd, 1024)))
             except:
                 return
 
@@ -325,8 +333,7 @@ class VM:
         t0 = time()
         while time() < t0 + timeout:
             try:
-                sys.stdout.write('.')
-                sys.stdout.flush()
+                print_progress('.')
                 pty_ssh(self.remote, self.port, password, bootstrap)
 
             except PtyProcessError:
@@ -334,8 +341,7 @@ class VM:
                 continue
 
             else:
-                sys.stdout.write(':)\n')
-                sys.stdout.flush()
+                print_progress(':)\n')
                 return
 
         raise RuntimeError("VM not up after {} seconds".format(timeout))
@@ -359,18 +365,18 @@ class VM:
             except:
                 pass
 
-        print("Waiting for the VM to shut down ...")
+        print_progress("Waiting for the VM to shut down ")
         t0 = time()
         while time() < t0 + timeout:
             if open_qmp('vm.qmp') is None:
                 # the socket is dead, so the VM must have stopped
-                print()
-                break
-            print('.', end='', flush=True)
+                print_progress('\n')
+                return
+            print_progress('.')
             sleep(.2)
 
-        else:
-            raise RuntimeError("VM did not shut down normally")
+        print_progress('\n')
+        raise RuntimeError("VM did not shut down normally")
 
     def commit(self):
         echo_run(['qemu-img', 'commit', str(self.local_disk)])
@@ -379,6 +385,7 @@ class VM:
     def boot(self):
         with cd(self.var):
             qemu = list(self.qemu_argv())
+            logger.debug('+ ' + ' '.join(qemu))
             subprocess.Popen(qemu)
 
             self.wait_for_qemu_sockets()
@@ -400,7 +407,7 @@ class VM:
                         self.commit()
 
                     else:
-                        print("Aborting commit")
+                        logger.info("Aborting commit")
 
             finally:
                 kill_qemu_via_qmp('vm.qmp')
@@ -652,7 +659,7 @@ def prepare_cloud_image(platform, *args):
     parser.add_argument('--db', default=str(Path.home() / '.factory'))
     options = parser.parse_args(args)
 
-    print("Preparing factory image for", platform)
+    logger.info("Preparing factory image for %s", platform)
     builder_cls = PLATFORMS[platform]
 
     db_root = Path(options.db)
@@ -682,6 +689,20 @@ DEFAULTS = {
 }
 
 
+def set_up_logging(quiet, verbose):
+    if verbose:
+        log_level = logging.DEBUG
+
+    elif quiet:
+        log_level = logging.ERROR
+
+    else:
+        log_level = logging.INFO
+
+    logger.setLevel(log_level)
+    logging.basicConfig(level=log_level, format='%(message)s')
+
+
 def main(argv):
     arch = get_arch()
     if arch in DEFAULTS.keys():
@@ -692,9 +713,12 @@ def main(argv):
     platform_list = [x.name for x in paths.IMAGES.iterdir() if x.is_dir()]
 
     parser = ArgumentParser()
+    parser.add_argument('-q', '--quiet', action='store_true')
+    parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('--platform',
                         choices=platform_list,
                         default=default_platform)
     parser.add_argument('command', choices=COMMANDS.keys())
     (options, args) = parser.parse_known_args(argv)
+    set_up_logging(options.quiet, options.verbose)
     COMMANDS[options.command](options.platform, *args)
