@@ -15,6 +15,7 @@ from contextlib import contextmanager
 from argparse import ArgumentParser, REMAINDER
 import shlex
 import logging
+import signal
 
 """
 reference:
@@ -704,6 +705,7 @@ def set_up_logging(quiet, verbose):
 
 
 def main(argv):
+    signal.signal(signal.SIGTERM, lambda *args: sys.exit(1))
     arch = get_arch()
     if arch in DEFAULTS.keys():
         default_platform = DEFAULTS[arch]
