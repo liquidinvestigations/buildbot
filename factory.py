@@ -704,8 +704,11 @@ def set_up_logging(quiet, verbose):
     logging.basicConfig(level=log_level, format='%(message)s')
 
 
-def main(argv):
+def handle_sigterm():
     signal.signal(signal.SIGTERM, lambda *args: sys.exit(1))
+
+
+def main(argv):
     arch = get_arch()
     if arch in DEFAULTS.keys():
         default_platform = DEFAULTS[arch]
