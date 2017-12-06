@@ -705,7 +705,11 @@ def set_up_logging(quiet, verbose):
 
 
 def handle_sigterm():
-    signal.signal(signal.SIGTERM, lambda *args: sys.exit(1))
+    def handler(*args):
+        logger.debug("Caught SIGTERM, shutting down")
+        sys.exit(1)
+
+    signal.signal(signal.SIGTERM, handler)
 
 
 def main(argv):
