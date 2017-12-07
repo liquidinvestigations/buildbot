@@ -101,7 +101,7 @@ parallel(
         }
         stage('ARM64: Save artifacts') {
           sh 'cd images/cloud-arm64 && tar c * > ../../cloud-arm64-image.tar'
-          sh 'gzip -0 < cloud-arm64-image.tar > cloud-arm64-image.tar.gz'
+          sh 'gzip -1 < cloud-arm64-image.tar > cloud-arm64-image.tar.gz'
           archiveArtifacts 'cloud-arm64-image.tar.gz'
         }
       }
