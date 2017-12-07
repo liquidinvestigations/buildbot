@@ -15,6 +15,7 @@ from contextlib import contextmanager
 from argparse import ArgumentParser, REMAINDER
 import shlex
 import logging
+import signal
 
 """
 reference:
@@ -701,6 +702,14 @@ def set_up_logging(quiet, verbose):
 
     logger.setLevel(log_level)
     logging.basicConfig(level=log_level, format='%(message)s')
+
+
+def handle_sigterm():
+    def handler(*args):
+        logger.debug("Caught SIGTERM, shutting down")
+        sys.exit(1)
+
+    signal.signal(signal.SIGTERM, handler)
 
 
 def main(argv):
