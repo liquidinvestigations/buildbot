@@ -27,7 +27,7 @@ def main():
         'image': (
             'https://jenkins.liquiddemo.org/job/liquidinvestigations/'
             'job/factory/job/master/lastSuccessfulBuild/artifact/'
-            'cloud-{}-image.tar.xz'
+            'cloud-{}-image.tar.gz'
             .format(arch)
         ),
     }
@@ -35,9 +35,9 @@ def main():
     sh('git clone {github} {repo}'.format(**vars))
     sh('mkdir -p {repo}/images/cloud-{arch}'.format(**vars))
     os.chdir('{repo}/images/cloud-{arch}'.format(**vars))
-    sh('wget --progress=dot:giga {image} -O tmp.tar.xz'.format(**vars))
-    sh('xzcat tmp.tar.xz | tar x')
-    sh('rm tmp.tar.xz')
+    sh('wget --progress=dot:giga {image} -O tmp.tar.gz'.format(**vars))
+    sh('zcat tmp.tar.gz | tar x')
+    sh('rm tmp.tar.gz')
 
 
 if __name__ == '__main__':

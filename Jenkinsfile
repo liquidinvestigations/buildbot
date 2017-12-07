@@ -39,8 +39,8 @@ parallel(
         }
         stage('X86_64: Save artifacts') {
           sh 'cd images/cloud-x86_64 && tar c * > ../../cloud-x86_64-image.tar'
-          sh 'xz -0 < cloud-x86_64-image.tar > cloud-x86_64-image.tar.xz'
-          archiveArtifacts 'cloud-x86_64-image.tar.xz'
+          sh 'gzip -1 < cloud-x86_64-image.tar > cloud-x86_64-image.tar.gz'
+          archiveArtifacts 'cloud-x86_64-image.tar.gz'
         }
       }
       finally {
@@ -101,8 +101,8 @@ parallel(
         }
         stage('ARM64: Save artifacts') {
           sh 'cd images/cloud-arm64 && tar c * > ../../cloud-arm64-image.tar'
-          sh 'xz -0 < cloud-arm64-image.tar > cloud-arm64-image.tar.xz'
-          archiveArtifacts 'cloud-arm64-image.tar.xz'
+          sh 'gzip -0 < cloud-arm64-image.tar > cloud-arm64-image.tar.gz'
+          archiveArtifacts 'cloud-arm64-image.tar.gz'
         }
       }
       finally {
