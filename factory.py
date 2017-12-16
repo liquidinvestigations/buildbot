@@ -298,6 +298,9 @@ class VM:
             display = self.options.vnc - 5900
             yield from ['-display', 'vnc=localhost:{}'.format(display)]
 
+        if self.options.sdl:
+            yield from ['-display', 'sdl']
+
         yield from self.config.get('qemu-args', [])
 
     def vm_bootstrap_commands(self):
@@ -451,6 +454,7 @@ def add_vm_arguments(parser):
     parser.add_argument('--tcp', action='append', default=[])
     parser.add_argument('--udp', action='append', default=[])
     parser.add_argument('--vnc', type=int)
+    parser.add_argument('--sdl', action='store_true')
     parser.add_argument('--cdrom', action='append', default=[])
     parser.add_argument('--swap', default='2G')
     parser.add_argument('--commit', action='store_true')
