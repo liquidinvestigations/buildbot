@@ -91,6 +91,12 @@ Both modes support the following options:
     ./factory run --commit --yes apt install build-essential -y
     ```
 
+* `--usb-storage`: attach a virtual USB stick backed by a raw disk image.
+
+    ```
+    ./factory login --usb-storage usbstick.img
+    ```
+
 ### Windows
 Factory is mainly designed to run automated jobs in headless cloud VMs, but
 with a bit of creative invocation, it can run windows! First let's create a

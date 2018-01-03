@@ -183,6 +183,10 @@ class VM:
         self.udp_ports = [spec.split(':') for spec in self.options.udp]
 
         self.cdrom_paths = [Path(p).resolve() for p in self.options.cdrom]
+        self.usb_storage_paths = [
+            Path(p).resolve()
+            for p in self.options.usb_storage
+        ]
 
         if self.use_ssh:
             self.login = self.config.get('login', DEFAULT_LOGIN)
@@ -272,6 +276,12 @@ class VM:
 
         for path in self.cdrom_paths:
             yield from ['-drive', 'file={},media=cdrom'.format(path)]
+
+        for n, path in enumerate(self.usb_storage_paths):
+            yield from [
+                '-device', 'usb-storage,drive=usb{}'.format(n),
+                '-drive', 'if=none,id=usb{},format=raw,file={}'.format(n, path),
+            ]
 
         if self.use_ssh:
             for i, path, _ in self.shares:
@@ -456,6 +466,7 @@ def add_vm_arguments(parser):
     parser.add_argument('--vnc', type=int)
     parser.add_argument('--sdl', action='store_true')
     parser.add_argument('--cdrom', action='append', default=[])
+    parser.add_argument('--usb-storage', action='append', default=[])
     parser.add_argument('--swap', default='2G')
     parser.add_argument('--commit', action='store_true')
     parser.add_argument('-y', '--yes', action='store_true')
