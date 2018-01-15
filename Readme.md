@@ -14,6 +14,13 @@ $ cd factory
 $ ./factory echo hello world
 ```
 
+By default `install.py` will download _xenial_ cloud images. You can specify a
+different base image, e.g. _artful_:
+
+```shell
+$ python3 <(curl -sL https://github.com/liquidinvestigations/factory/raw/master/install.py) factory --image https://jenkins.liquiddemo.org/job/liquidinvestigations/job/factory/job/master/lastSuccessfulBuild/artifact/artful-x86_64.factory.gz
+```
+
 
 ### Building base imagse
 The installer described above downloads a pre-built cloud image, but you can
