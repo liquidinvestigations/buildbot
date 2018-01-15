@@ -82,8 +82,23 @@ parallel(
         stage('X86_64: Run the installer') {
           sh "#!/bin/bash\n" +
              "python3 <(cat install.py) installertarget"
+          sh './installertarget/factory run true'
         }
-        stage('X86_64: Test the installed image') {
+      }
+      finally {
+        deleteDir()
+      }
+    }
+  },
+
+  x86_64_installer_artful: {
+    node('cloud') {
+      deleteDir()
+      checkout scm
+      try {
+        stage('X86_64: Run the installer') {
+          sh "#!/bin/bash\n" +
+             "python3 <(cat install.py) installertarget --image https://jenkins.liquiddemo.org/job/liquidinvestigations/job/factory/job/PR-32/5/artifact/artful-x86_64.factory.gz"
           sh './installertarget/factory run true'
         }
       }
@@ -169,8 +184,23 @@ parallel(
         stage('ARM64: Run the installer') {
           sh "#!/bin/bash\n" +
              "python3 <(cat install.py) installertarget"
+          sh './installertarget/factory run true'
         }
-        stage('ARM64: Test the installed image') {
+      }
+      finally {
+        deleteDir()
+      }
+    }
+  },
+
+  arm64_installer_artful: {
+    node('arm64') {
+      deleteDir()
+      checkout scm
+      try {
+        stage('ARM64: Run the installer') {
+          sh "#!/bin/bash\n" +
+             "python3 <(cat install.py) installertarget --image https://jenkins.liquiddemo.org/job/liquidinvestigations/job/factory/job/PR-32/5/artifact/artful-arm64.factory.gz"
           sh './installertarget/factory run true'
         }
       }
