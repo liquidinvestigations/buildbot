@@ -26,7 +26,7 @@ def main():
         .format(arch)
     )
 
-    parser = ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument('repo')
     parser.add_argument('--image', default=default_image)
     options = parser.parse_args()
