@@ -139,7 +139,7 @@ parallel(
     }
   },
 
-  arm64_build: {
+  arm64_build_artful: {
     node('arm64') {
       deleteDir()
       checkout scm
