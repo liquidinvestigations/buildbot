@@ -20,7 +20,7 @@ def main():
 
     default_image = (
         'https://jenkins.liquiddemo.org/job/liquidinvestigations/'
-        'job/factory/job/image-url/lastSuccessfulBuild/artifact/'
+        'job/factory/view/change-requests/job/PR-32/lastSuccessfulBuild/artifact/'
         'xenial-{}.factory.gz'
         .format(arch)
     )
