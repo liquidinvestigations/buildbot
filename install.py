@@ -2,6 +2,7 @@ import sys
 import os
 import subprocess
 import shlex
+import argparse
 
 
 def sh(cmd):
@@ -10,8 +11,6 @@ def sh(cmd):
 
 
 def main():
-    [repo] = sys.argv[1:]
-
     arch = (
         subprocess.check_output('uname -m', shell=True)
         .decode('latin1')
@@ -20,16 +19,25 @@ def main():
     if arch == 'aarch64':
         arch = 'arm64'
 
+    default_image = (
+        'https://jenkins.liquiddemo.org/job/liquidinvestigations/'
+        'job/factory/job/master/lastSuccessfulBuild/artifact/'
+        'cloud-{}-image.tar.gz'
+        .format(arch)
+    )
+
+    parser = ArgumentParser()
+    parser.add_argument('repo')
+    parser.add_argument('--image', default=default_image)
+    options = parser.parse_args()
+
+    [repo] = sys.argv[1:]
+
     vars = {
         'github': 'https://github.com/liquidinvestigations/factory',
         'repo': shlex.quote(repo),
         'arch': arch,
-        'image': (
-            'https://jenkins.liquiddemo.org/job/liquidinvestigations/'
-            'job/factory/job/master/lastSuccessfulBuild/artifact/'
-            'cloud-{}-image.tar.gz'
-            .format(arch)
-        ),
+        'image': options.image,
     }
 
     sh('git clone {github} {repo}'.format(**vars))
