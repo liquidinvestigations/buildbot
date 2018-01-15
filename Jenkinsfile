@@ -38,8 +38,8 @@ parallel(
           sh './factory run true'
         }
         stage('X86_64: Save artifacts') {
-          sh './factory export cloud-x86_64 | gzip -1 > cloud-x86_64.factory.gz'
-          archiveArtifacts 'cloud-x86_64.factory.gz'
+          sh './factory export cloud-x86_64 | gzip -1 > xenial-x86_64.factory.gz'
+          archiveArtifacts 'xenial-x86_64.factory.gz'
 
           sh 'cd images/cloud-x86_64 && tar c * > ../../cloud-x86_64-image.tar'
           sh 'gzip -1 < cloud-x86_64-image.tar > cloud-x86_64-image.tar.gz'
@@ -103,8 +103,8 @@ parallel(
           sh './factory run true'
         }
         stage('ARM64: Save artifacts') {
-          sh './factory export cloud-arm64 | gzip -1 > cloud-arm64.factory.gz'
-          archiveArtifacts 'cloud-arm64.factory.gz'
+          sh './factory export cloud-arm64 | gzip -1 > xenial-arm64.factory.gz'
+          archiveArtifacts 'xenial-arm64.factory.gz'
 
           sh 'cd images/cloud-arm64 && tar c * > ../../cloud-arm64-image.tar'
           sh 'gzip -1 < cloud-arm64-image.tar > cloud-arm64-image.tar.gz'
