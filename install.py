@@ -1,4 +1,3 @@
-import sys
 import os
 import subprocess
 import shlex
@@ -31,11 +30,9 @@ def main():
     parser.add_argument('--image', default=default_image)
     options = parser.parse_args()
 
-    [repo] = sys.argv[1:]
-
     vars = {
         'github': 'https://github.com/liquidinvestigations/factory',
-        'repo': shlex.quote(repo),
+        'repo': shlex.quote(options.repo),
         'arch': arch,
         'image': options.image,
     }
