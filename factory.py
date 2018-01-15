@@ -561,16 +561,17 @@ def download_if_missing(path, url):
 
 class BaseBuilder:
 
-    def __init__(self, db_root, workbench):
+    def __init__(self, db_root, workbench, flavor):
         self.workbench = workbench
+        self.flavor = flavor
         self.db = db_root / self.name
         self.db.mkdir(exist_ok=True)
         self.disk = self.workbench / 'disk.img'
-        upstream_image_name = self.upstream_image_url.rsplit('/', 1)[-1]
+        upstream_image_name = self.get_upstream_image_url().rsplit('/', 1)[-1]
         self.upstream_image = self.db / upstream_image_name
 
     def download(self):
-        download_if_missing(self.upstream_image, self.upstream_image_url)
+        download_if_missing(self.upstream_image, self.get_upstream_image_url())
 
     def unpack_upstream(self):
         echo_run(['qemu-img', 'convert', '-O', 'qcow2',
@@ -606,10 +607,19 @@ class Builder_x86_64(BaseBuilder):
 
     name = 'cloud-x86_64'
 
-    upstream_image_url = (
-        'https://cloud-images.ubuntu.com/server/releases/16.04/release/'
-        'ubuntu-16.04-server-cloudimg-amd64-disk1.img'
-    )
+    def get_upstream_image_url(self):
+        if self.flavor == 'xenial':
+            return (
+                'https://cloud-images.ubuntu.com/xenial/current/'
+                'xenial-server-cloudimg-amd64-disk1.img'
+            )
+        elif self.flavor == 'artful':
+            return (
+                'https://cloud-images.ubuntu.com/artful/current/'
+                'artful-server-cloudimg-amd64.img'
+            )
+        else:
+            raise RuntimeError("Unknown flavor {}".format(self.flavor))
 
     def run_qemu(self):
         echo_run([
@@ -629,10 +639,19 @@ class Builder_arm64(BaseBuilder):
 
     name = 'cloud-arm64'
 
-    upstream_image_url = (
-        'https://cloud-images.ubuntu.com/server/releases/16.04/release/'
-        'ubuntu-16.04-server-cloudimg-arm64-uefi1.img'
-    )
+    def get_upstream_image_url(self):
+        if self.flavor == 'xenial':
+            return (
+                'https://cloud-images.ubuntu.com/xenial/current/'
+                'xenial-server-cloudimg-arm64-uefi1.img'
+            )
+        elif self.flavor == 'artful':
+            return (
+                'https://cloud-images.ubuntu.com/artful/current/'
+                'artful-server-cloudimg-arm64.img'
+            )
+        else:
+            raise RuntimeError("Unknown flavor {}".format(self.flavor))
 
     bios_url = (
         'https://releases.linaro.org/components/kernel/uefi-linaro/15.12/'
@@ -673,6 +692,7 @@ PLATFORMS = {
 def prepare_cloud_image(platform, *args):
     parser = ArgumentParser()
     parser.add_argument('--db', default=str(Path.home() / '.factory'))
+    parser.add_argument('--flavor', default='xenial')
     options = parser.parse_args(args)
 
     logger.info("Preparing factory image for %s", platform)
@@ -684,7 +704,7 @@ def prepare_cloud_image(platform, *args):
     workbench = paths.repo / 'images' / platform
     workbench.mkdir()
     try:
-        builder_cls(db_root, workbench).build()
+        builder_cls(db_root, workbench, options.flavor).build()
     except:
         shutil.rmtree(str(workbench))
         raise

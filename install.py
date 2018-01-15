@@ -1,7 +1,7 @@
-import sys
 import os
 import subprocess
 import shlex
+import argparse
 
 
 def sh(cmd):
@@ -10,8 +10,6 @@ def sh(cmd):
 
 
 def main():
-    [repo] = sys.argv[1:]
-
     arch = (
         subprocess.check_output('uname -m', shell=True)
         .decode('latin1')
@@ -20,24 +18,30 @@ def main():
     if arch == 'aarch64':
         arch = 'arm64'
 
+    default_image = (
+        'https://jenkins.liquiddemo.org/job/liquidinvestigations/'
+        'job/factory/view/change-requests/job/PR-32/lastSuccessfulBuild/artifact/'
+        'xenial-{}.factory.gz'
+        .format(arch)
+    )
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('repo')
+    parser.add_argument('--image', default=default_image)
+    options = parser.parse_args()
+
     vars = {
         'github': 'https://github.com/liquidinvestigations/factory',
-        'repo': shlex.quote(repo),
+        'repo': shlex.quote(options.repo),
         'arch': arch,
-        'image': (
-            'https://jenkins.liquiddemo.org/job/liquidinvestigations/'
-            'job/factory/job/master/lastSuccessfulBuild/artifact/'
-            'cloud-{}-image.tar.gz'
-            .format(arch)
-        ),
+        'image': options.image,
     }
 
     sh('git clone {github} {repo}'.format(**vars))
-    sh('mkdir -p {repo}/images/cloud-{arch}'.format(**vars))
-    os.chdir('{repo}/images/cloud-{arch}'.format(**vars))
-    sh('wget --progress=dot:giga {image} -O tmp.tar.gz'.format(**vars))
-    sh('zcat tmp.tar.gz | tar x')
-    sh('rm tmp.tar.gz')
+    os.chdir(vars['repo'])
+    sh('wget --progress=dot:giga {image} -O tmp.factory.gz'.format(**vars))
+    sh('zcat tmp.factory.gz | ./factory import cloud-{arch}'.format(**vars))
+    sh('rm tmp.factory.gz')
 
 
 if __name__ == '__main__':
