@@ -766,3 +766,8 @@ def main(argv):
     (options, args) = parser.parse_known_args(argv)
     set_up_logging(options.quiet, options.verbose)
     COMMANDS[options.command](options.platform, *args)
+
+
+def cmd():
+    handle_sigterm()
+    main(sys.argv[1:])
