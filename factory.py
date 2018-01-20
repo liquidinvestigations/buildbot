@@ -51,10 +51,11 @@ class Paths:
     def __init__(self, repo):
         self.IMAGES = repo / 'images'
         self.VAR = repo / 'var'
+        self.IMAGES.mkdir(parents=True, exist_ok=True)
 
 
-code_repo = Path(__file__).resolve().parent
-paths = Paths(code_repo)
+HOME_DOT_FACTORY = Path.home() / '.factory'
+paths = Paths(HOME_DOT_FACTORY)
 
 
 def get_arch():
@@ -535,7 +536,7 @@ def import_image(_, *args):
     options = parser.parse_args(args)
 
     image_dir = paths.IMAGES / options.image
-    image_dir.mkdir()
+    image_dir.mkdir(parents=True)
 
     with cd(image_dir):
         subprocess.run(['tar', 'x'], check=True)
@@ -690,7 +691,7 @@ PLATFORMS = {
 
 def prepare_cloud_image(platform, *args):
     parser = ArgumentParser()
-    parser.add_argument('--db', default=str(Path.home() / '.factory'))
+    parser.add_argument('--db', default=str(HOME_DOT_FACTORY))
     parser.add_argument('--flavor', default='xenial')
     options = parser.parse_args(args)
 
