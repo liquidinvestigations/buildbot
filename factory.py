@@ -49,7 +49,6 @@ def print_progress(text):
 class Paths:
 
     def __init__(self, repo):
-        self.repo = repo
         self.IMAGES = repo / 'images'
         self.VAR = repo / 'var'
 
@@ -701,7 +700,7 @@ def prepare_cloud_image(platform, *args):
     db_root = Path(options.db)
     db_root.mkdir(exist_ok=True)
 
-    workbench = paths.repo / 'images' / platform
+    workbench = paths.IMAGES / platform
     workbench.mkdir()
     try:
         builder_cls(db_root, workbench, options.flavor).build()
