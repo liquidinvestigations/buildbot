@@ -564,7 +564,7 @@ class BaseBuilder:
     def __init__(self, db_root, workbench, flavor):
         self.workbench = workbench
         self.flavor = flavor
-        self.db = db_root / self.name
+        self.db = db_root / 'downloads'
         self.db.mkdir(exist_ok=True)
         self.disk = self.workbench / 'disk.img'
         upstream_image_name = self.get_upstream_image_url().rsplit('/', 1)[-1]
@@ -605,8 +605,6 @@ class BaseBuilder:
 
 class Builder_x86_64(BaseBuilder):
 
-    name = 'cloud-x86_64'
-
     def get_upstream_image_url(self):
         if self.flavor == 'xenial':
             return (
@@ -636,8 +634,6 @@ class Builder_x86_64(BaseBuilder):
 
 
 class Builder_arm64(BaseBuilder):
-
-    name = 'cloud-arm64'
 
     def get_upstream_image_url(self):
         if self.flavor == 'xenial':
