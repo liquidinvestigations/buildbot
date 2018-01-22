@@ -679,8 +679,8 @@ class Builder_arm64(BaseBuilder):
         ])
 
 PLATFORMS = {
-    'cloud-x86_64': Builder_x86_64,
-    'cloud-arm64': Builder_arm64,
+    'x86_64': Builder_x86_64,
+    'aarch64': Builder_arm64,
 }
 
 def prepare_cloud_image(platform, *args):
@@ -689,13 +689,15 @@ def prepare_cloud_image(platform, *args):
     parser.add_argument('--flavor', default='xenial')
     options = parser.parse_args(args)
 
-    logger.info("Preparing factory image for %s", platform)
-    builder_cls = PLATFORMS[platform]
+    arch = get_arch()
+    builder_cls = PLATFORMS[arch]
+
+    logger.info("Preparing factory image")
 
     db_root = Path(options.db)
     db_root.mkdir(exist_ok=True)
 
-    workbench = paths.IMAGES / platform
+    workbench = paths.IMAGES / 'cloud'
     workbench.mkdir()
     try:
         builder_cls(db_root, workbench, options.flavor).build()
@@ -753,9 +755,7 @@ def main(argv):
     parser = ArgumentParser()
     parser.add_argument('-q', '--quiet', action='store_true')
     parser.add_argument('-v', '--verbose', action='store_true')
-    parser.add_argument('--platform',
-                        choices=platform_list,
-                        default=default_platform)
+    parser.add_argument('--platform', choices=platform_list, default='cloud')
     parser.add_argument('command', choices=COMMANDS.keys())
     (options, args) = parser.parse_known_args(argv)
     set_up_logging(options.quiet, options.verbose)
