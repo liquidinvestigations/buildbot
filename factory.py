@@ -574,9 +574,7 @@ class BaseBuilder:
         download_if_missing(self.upstream_image, self.get_upstream_image_url())
 
     def unpack_upstream(self):
-        echo_run(['qemu-img', 'convert', '-O', 'qcow2',
-                    str(self.upstream_image), str(self.disk)])
-
+        shutil.copy(str(self.upstream_image), str(self.disk))
         echo_run(['qemu-img', 'resize', str(self.disk), '10G'])
 
     def create_cloud_init_image(self):
