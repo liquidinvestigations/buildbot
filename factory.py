@@ -48,14 +48,14 @@ def print_progress(text):
 
 class Paths:
 
-    def __init__(self, repo):
-        self.IMAGES = repo / 'images'
-        self.VAR = repo / 'var'
+    def __init__(self, datadir):
+        self.datadir = datadir
+        self.IMAGES = datadir / 'images'
+        self.VAR = datadir / 'var'
         self.IMAGES.mkdir(parents=True, exist_ok=True)
 
 
-HOME_DOT_FACTORY = Path.home() / '.factory'
-paths = Paths(HOME_DOT_FACTORY)
+paths = Paths(Path.home() / '.factory')
 
 
 def get_arch():
@@ -685,7 +685,7 @@ PLATFORMS = {
 
 def prepare_cloud_image(platform, *args):
     parser = ArgumentParser()
-    parser.add_argument('--db', default=str(HOME_DOT_FACTORY))
+    parser.add_argument('--db', default=str(paths.datadir))
     parser.add_argument('--flavor', default='xenial')
     options = parser.parse_args(args)
 

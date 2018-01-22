@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 import factory
+
+factory.paths = factory.Paths(Path(__file__).resolve().parent / 'data')
 factory.cmd()
