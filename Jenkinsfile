@@ -136,7 +136,7 @@ parallel(
           sh './factory run true'
         }
         stage('ARM64: Save artifacts') {
-          sh 'set -o pipefail; ./factory export default | gzip -1 > xenial-arm64.factory.gz'
+          sh 'set -o pipefail; ./factory export cloud | gzip -1 > xenial-arm64.factory.gz'
           archiveArtifacts 'xenial-arm64.factory.gz'
         }
       }
@@ -158,7 +158,7 @@ parallel(
           sh './factory run true'
         }
         stage('ARM64: Save artifacts') {
-          sh 'set -o pipefail; ./factory export default | gzip -1 > artful-arm64.factory.gz'
+          sh 'set -o pipefail; ./factory export cloud | gzip -1 > artful-arm64.factory.gz'
           archiveArtifacts 'artful-arm64.factory.gz'
         }
       }
