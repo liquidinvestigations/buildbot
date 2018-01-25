@@ -39,7 +39,7 @@ parallel(
         }
         stage('X86_64: Save artifacts') {
           sh "#!/bin/bash -ex\n" +
-             "set -o pipefail\n"
+             "set -o pipefail\n" +
              "./factory export cloud | gzip -1 > xenial-x86_64.factory.gz"
           archiveArtifacts 'xenial-x86_64.factory.gz'
         }
@@ -63,7 +63,7 @@ parallel(
         }
         stage('X86_64: Save artifacts') {
           sh "#!/bin/bash -ex\n" +
-             "set -o pipefail\n"
+             "set -o pipefail\n" +
              "./factory export cloud | gzip -1 > artful-x86_64.factory.gz"
           archiveArtifacts 'artful-x86_64.factory.gz'
         }
@@ -141,7 +141,7 @@ parallel(
         }
         stage('ARM64: Save artifacts') {
           sh "#!/bin/bash -ex\n" +
-             "set -o pipefail\n"
+             "set -o pipefail\n" +
              "./factory export cloud | gzip -1 > xenial-arm64.factory.gz"
           archiveArtifacts 'xenial-arm64.factory.gz'
         }
@@ -165,7 +165,7 @@ parallel(
         }
         stage('ARM64: Save artifacts') {
           sh "#!/bin/bash -ex\n" +
-             "set -o pipefail\n"
+             "set -o pipefail\n" +
              "./factory export cloud | gzip -1 > artful-arm64.factory.gz"
           archiveArtifacts 'artful-arm64.factory.gz'
         }
