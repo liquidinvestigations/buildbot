@@ -33,14 +33,13 @@ def main():
     vars = {
         'github': 'https://github.com/liquidinvestigations/factory',
         'repo': shlex.quote(options.repo),
-        'arch': arch,
         'image': options.image,
     }
 
     sh('git clone {github} {repo}'.format(**vars))
     os.chdir(vars['repo'])
     sh('wget --progress=dot:giga {image} -O tmp.factory.gz'.format(**vars))
-    sh('zcat tmp.factory.gz | ./factory import cloud-{arch}'.format(**vars))
+    sh('zcat tmp.factory.gz | ./factory import cloud')
     sh('rm tmp.factory.gz')
 
 

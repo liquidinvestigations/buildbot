@@ -1,3 +1,4 @@
-/var
+/data
 /.cache
 *.pyc
+/factory.egg-info

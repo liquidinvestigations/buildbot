@@ -38,7 +38,9 @@ parallel(
           sh './factory run true'
         }
         stage('X86_64: Save artifacts') {
-          sh './factory export cloud-x86_64 | gzip -1 > xenial-x86_64.factory.gz'
+          sh "#!/bin/bash -ex\n" +
+             "set -o pipefail\n" +
+             "./factory export cloud | gzip -1 > xenial-x86_64.factory.gz"
           archiveArtifacts 'xenial-x86_64.factory.gz'
         }
       }
@@ -60,7 +62,9 @@ parallel(
           sh './factory run true'
         }
         stage('X86_64: Save artifacts') {
-          sh './factory export cloud-x86_64 | gzip -1 > artful-x86_64.factory.gz'
+          sh "#!/bin/bash -ex\n" +
+             "set -o pipefail\n" +
+             "./factory export cloud | gzip -1 > artful-x86_64.factory.gz"
           archiveArtifacts 'artful-x86_64.factory.gz'
         }
       }
@@ -78,7 +82,7 @@ parallel(
         stage('X86_64: Run the installer') {
           sh "#!/bin/bash\n" +
              "python3 <(cat install.py) installertarget"
-          sh './installertarget/factory run true'
+          sh './installertarget/factory run --image cloud true'
         }
       }
       finally {
@@ -95,7 +99,7 @@ parallel(
         stage('X86_64: Run the installer') {
           sh "#!/bin/bash\n" +
              "python3 <(cat install.py) installertarget --image https://jenkins.liquiddemo.org/job/liquidinvestigations/job/factory/job/master/lastSuccessfulBuild/artifact/artful-x86_64.factory.gz"
-          sh './installertarget/factory run true'
+          sh './installertarget/factory run --image cloud true'
         }
       }
       finally {
@@ -136,7 +140,9 @@ parallel(
           sh './factory run true'
         }
         stage('ARM64: Save artifacts') {
-          sh './factory export cloud-arm64 | gzip -1 > xenial-arm64.factory.gz'
+          sh "#!/bin/bash -ex\n" +
+             "set -o pipefail\n" +
+             "./factory export cloud | gzip -1 > xenial-arm64.factory.gz"
           archiveArtifacts 'xenial-arm64.factory.gz'
         }
       }
@@ -158,7 +164,9 @@ parallel(
           sh './factory run true'
         }
         stage('ARM64: Save artifacts') {
-          sh './factory export cloud-arm64 | gzip -1 > artful-arm64.factory.gz'
+          sh "#!/bin/bash -ex\n" +
+             "set -o pipefail\n" +
+             "./factory export cloud | gzip -1 > artful-arm64.factory.gz"
           archiveArtifacts 'artful-arm64.factory.gz'
         }
       }
@@ -176,7 +184,7 @@ parallel(
         stage('ARM64: Run the installer') {
           sh "#!/bin/bash\n" +
              "python3 <(cat install.py) installertarget"
-          sh './installertarget/factory run true'
+          sh './installertarget/factory run --image cloud true'
         }
       }
       finally {
@@ -193,7 +201,7 @@ parallel(
         stage('ARM64: Run the installer') {
           sh "#!/bin/bash\n" +
              "python3 <(cat install.py) installertarget --image https://jenkins.liquiddemo.org/job/liquidinvestigations/job/factory/job/master/lastSuccessfulBuild/artifact/artful-arm64.factory.gz"
-          sh './installertarget/factory run true'
+          sh './installertarget/factory run --image cloud true'
         }
       }
       finally {

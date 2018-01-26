@@ -48,14 +48,14 @@ def print_progress(text):
 
 class Paths:
 
-    def __init__(self, repo):
-        self.repo = repo
-        self.IMAGES = repo / 'images'
-        self.VAR = repo / 'var'
+    def __init__(self, datadir):
+        self.datadir = datadir
+        self.IMAGES = datadir / 'images'
+        self.VAR = datadir / 'var'
+        self.IMAGES.mkdir(parents=True, exist_ok=True)
 
 
-code_repo = Path(__file__).resolve().parent
-paths = Paths(code_repo)
+paths = Paths(Path.home() / '.factory')
 
 
 def get_arch():
@@ -157,8 +157,8 @@ DEFAULT_LOGIN = {
 
 
 @contextmanager
-def instance(platform, options, use_ssh=True):
-    vm = VM(platform, options, use_ssh)
+def instance(options, use_ssh=True):
+    vm = VM(options, use_ssh)
     with vm.var_folder():
         with vm.boot():
             yield vm
@@ -166,8 +166,8 @@ def instance(platform, options, use_ssh=True):
 
 class VM:
 
-    def __init__(self, platform, options, use_ssh):
-        self.platform_home = paths.IMAGES / (options.image or platform)
+    def __init__(self, options, use_ssh):
+        self.platform_home = paths.IMAGES / (options.image or 'cloud')
         self.options = options
         self.use_ssh = use_ssh
         self.verbose = options.verbose
@@ -472,37 +472,37 @@ def add_vm_arguments(parser):
     parser.add_argument('-y', '--yes', action='store_true')
 
 
-def run_factory(platform, *args):
+def run_factory(*args):
     parser = ArgumentParser()
     add_vm_arguments(parser)
     parser.add_argument('args', nargs=REMAINDER)
     options = parser.parse_args(args)
 
-    with instance(platform, options) as vm:
+    with instance(options) as vm:
         args = ['sudo'] + options.args
         cmd = ' '.join(shlex.quote(a) for a in args)
         vm.ssh(cmd)
 
 
-def login(platform, *args):
+def login(*args):
     parser = ArgumentParser()
     add_vm_arguments(parser)
     options = parser.parse_args(args)
 
-    with instance(platform, options) as vm:
+    with instance(options) as vm:
         vm.ssh()
 
 
-def console(platform, *args):
+def console(*args):
     parser = ArgumentParser()
     add_vm_arguments(parser)
     options = parser.parse_args(args)
 
-    with instance(platform, options, use_ssh=False) as vm:
+    with instance(options, use_ssh=False) as vm:
         vm.console()
 
 
-def create_image(_, *args):
+def create_image(*args):
     parser = ArgumentParser()
     parser.add_argument('image')
     parser.add_argument('--size', default='8G')
@@ -518,7 +518,7 @@ def create_image(_, *args):
     ])
 
 
-def export_image(_, *args):
+def export_image(*args):
     image_list = [x.name for x in paths.IMAGES.iterdir() if x.is_dir()]
     parser = ArgumentParser()
     parser.add_argument('image', choices=image_list)
@@ -530,13 +530,13 @@ def export_image(_, *args):
         subprocess.run(['tar', 'c', '.'], check=True)
 
 
-def import_image(_, *args):
+def import_image(*args):
     parser = ArgumentParser()
     parser.add_argument('image')
     options = parser.parse_args(args)
 
     image_dir = paths.IMAGES / options.image
-    image_dir.mkdir()
+    image_dir.mkdir(parents=True)
 
     with cd(image_dir):
         subprocess.run(['tar', 'x'], check=True)
@@ -564,7 +564,7 @@ class BaseBuilder:
     def __init__(self, db_root, workbench, flavor):
         self.workbench = workbench
         self.flavor = flavor
-        self.db = db_root / self.name
+        self.db = db_root / 'downloads'
         self.db.mkdir(exist_ok=True)
         self.disk = self.workbench / 'disk.img'
         upstream_image_name = self.get_upstream_image_url().rsplit('/', 1)[-1]
@@ -574,9 +574,7 @@ class BaseBuilder:
         download_if_missing(self.upstream_image, self.get_upstream_image_url())
 
     def unpack_upstream(self):
-        echo_run(['qemu-img', 'convert', '-O', 'qcow2',
-                    str(self.upstream_image), str(self.disk)])
-
+        shutil.copy(str(self.upstream_image), str(self.disk))
         echo_run(['qemu-img', 'resize', str(self.disk), '10G'])
 
     def create_cloud_init_image(self):
@@ -604,8 +602,6 @@ class BaseBuilder:
 
 
 class Builder_x86_64(BaseBuilder):
-
-    name = 'cloud-x86_64'
 
     def get_upstream_image_url(self):
         if self.flavor == 'xenial':
@@ -636,8 +632,6 @@ class Builder_x86_64(BaseBuilder):
 
 
 class Builder_arm64(BaseBuilder):
-
-    name = 'cloud-arm64'
 
     def get_upstream_image_url(self):
         if self.flavor == 'xenial':
@@ -685,23 +679,25 @@ class Builder_arm64(BaseBuilder):
         ])
 
 PLATFORMS = {
-    'cloud-x86_64': Builder_x86_64,
-    'cloud-arm64': Builder_arm64,
+    'x86_64': Builder_x86_64,
+    'aarch64': Builder_arm64,
 }
 
-def prepare_cloud_image(platform, *args):
+def prepare_cloud_image(*args):
     parser = ArgumentParser()
-    parser.add_argument('--db', default=str(Path.home() / '.factory'))
+    parser.add_argument('--db', default=str(paths.datadir))
     parser.add_argument('--flavor', default='xenial')
     options = parser.parse_args(args)
 
-    logger.info("Preparing factory image for %s", platform)
-    builder_cls = PLATFORMS[platform]
+    arch = get_arch()
+    builder_cls = PLATFORMS[arch]
+
+    logger.info("Preparing factory image")
 
     db_root = Path(options.db)
     db_root.mkdir(exist_ok=True)
 
-    workbench = paths.repo / 'images' / platform
+    workbench = paths.IMAGES / 'cloud'
     workbench.mkdir()
     try:
         builder_cls(db_root, workbench, options.flavor).build()
@@ -748,21 +744,15 @@ def handle_sigterm():
 
 
 def main(argv):
-    arch = get_arch()
-    if arch in DEFAULTS.keys():
-        default_platform = DEFAULTS[arch]
-    else:
-        raise RuntimeError("Architecture {} not supported.".format(arch))
-
-    platform_list = [x.name for x in paths.IMAGES.iterdir() if x.is_dir()]
-
     parser = ArgumentParser()
     parser.add_argument('-q', '--quiet', action='store_true')
     parser.add_argument('-v', '--verbose', action='store_true')
-    parser.add_argument('--platform',
-                        choices=platform_list,
-                        default=default_platform)
     parser.add_argument('command', choices=COMMANDS.keys())
     (options, args) = parser.parse_known_args(argv)
     set_up_logging(options.quiet, options.verbose)
-    COMMANDS[options.command](options.platform, *args)
+    COMMANDS[options.command](*args)
+
+
+def cmd():
+    handle_sigterm()
+    main(sys.argv[1:])
