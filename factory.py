@@ -254,6 +254,9 @@ class VM:
             )
         )
 
+        if self.options.restrict_network:
+            netdev_arg += ',restrict=on'
+
         yield from [
             '-netdev', netdev_arg,
             '-device', 'virtio-net-pci,netdev=user,romfile=',
@@ -456,6 +459,7 @@ def add_vm_arguments(parser):
     parser.add_argument('--share', action='append', default=[])
     parser.add_argument('-m', '--memory', default=512, type=int)
     parser.add_argument('-s', '--smp', default=1, type=int)
+    parser.add_argument('--restrict-network', action='store_true')
     parser.add_argument('--tcp', action='append', default=[])
     parser.add_argument('--udp', action='append', default=[])
     parser.add_argument('--vnc', type=int)
