@@ -179,8 +179,16 @@ class VM:
         else:
             self.config = {}
 
-        self.tcp_ports = [spec.split(':') for spec in self.options.tcp]
-        self.udp_ports = [spec.split(':') for spec in self.options.udp]
+        def parse_port(spec):
+            bits = spec.split(':')
+            if len(bits) == 2:
+                bits = ['127.0.0.1'] + bits
+            elif len(bits) != 3:
+                raise RuntimeError("Can't parse port spec %r" % spec)
+            return bits
+
+        self.tcp_ports = [parse_port(spec) for spec in self.options.tcp]
+        self.udp_ports = [parse_port(spec) for spec in self.options.udp]
 
         self.cdrom_paths = [Path(p).resolve() for p in self.options.cdrom]
         self.usb_storage_paths = [
@@ -192,7 +200,7 @@ class VM:
             self.login = self.config.get('login', DEFAULT_LOGIN)
             self.remote = '{}@localhost'.format(self.login['username'])
             self.port = random.randint(1025, 65535)
-            self.tcp_ports.append((self.port, 22))
+            self.tcp_ports.append(['127.0.0.1', self.port, 22])
 
             self.shares = []
             for i, s in enumerate(self.options.share):
@@ -251,12 +259,12 @@ class VM:
         netdev_arg = (
             'user,id=user,net=192.168.1.0/24,hostname=vm-factory'
             + ''.join(
-                ',hostfwd=tcp:127.0.0.1:{}-:{}'.format(*pair)
-                for pair in self.tcp_ports
+                ',hostfwd=tcp:{}:{}-:{}'.format(*port)
+                for port in self.tcp_ports
             )
             + ''.join(
-                ',hostfwd=udp:127.0.0.1:{}-:{}'.format(*pair)
-                for pair in self.udp_ports
+                ',hostfwd=udp:{}:{}-:{}'.format(*port)
+                for port in self.udp_ports
             )
         )
 
