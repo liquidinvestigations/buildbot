@@ -85,19 +85,6 @@ def open_qmp(qmp_path):
         return qmp
 
 
-def kill_qemu_via_qmp(qmp_path):
-    qmp = open_qmp(qmp_path)
-
-    if not qmp:
-        # qemu already quit, great!
-        return
-
-    # https://wiki.qemu.org/Documentation/QMP
-    qmp.sendall(b'{"execute": "qmp_capabilities"}\n')
-    qmp.sendall(b'{"execute": "quit"}\n')
-    qmp.close()
-
-
 class PtyProcessError(RuntimeError):
     pass
 
@@ -239,7 +226,6 @@ class VM:
 
         yield from [
             qemu_binary,
-            '-daemonize',
             '-display', 'none',
             '-chardev', 'socket,id=mon-qmp,path=vm.qmp,server,nowait',
             '-mon', 'chardev=mon-qmp,mode=control',
@@ -406,9 +392,9 @@ class VM:
     @contextmanager
     def boot(self):
         with cd(self.var):
-            qemu = list(self.qemu_argv())
-            logger.debug('+ ' + ' '.join(qemu))
-            subprocess.Popen(qemu)
+            qemu_cmd = list(self.qemu_argv())
+            logger.debug('+ ' + ' '.join(qemu_cmd))
+            self.qemu = subprocess.Popen(qemu_cmd)
 
             self.wait_for_qemu_sockets()
 
@@ -432,7 +418,8 @@ class VM:
                         logger.info("Aborting commit")
 
             finally:
-                kill_qemu_via_qmp('vm.qmp')
+                self.qemu.kill()
+                self.qemu.wait()
 
     @staticmethod
     def invoke_ssh(cmd):
