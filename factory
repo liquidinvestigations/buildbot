@@ -3,5 +3,5 @@
 from pathlib import Path
 import factory
 
-factory.paths = factory.Paths(Path(__file__).resolve().parent / 'data')
+factory.paths = factory.Paths(Path(__file__).resolve().parent)
 factory.cmd()
