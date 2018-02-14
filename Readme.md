@@ -91,11 +91,11 @@ Both modes support the following options:
     ./factory login --vnc 5900
     ```
 
-* `--commit`: after the VM quits, save the changes to its disk. Add `-y` or
-  `--yes` to skip confirmation.
+* `--persist`: don't create a temporary disk, instead live-modify the base
+  image.
 
     ```
-    ./factory run --commit --yes apt install build-essential -y
+    ./factory run --persist apt install build-essential -y
     ```
 
 * `--usb-storage`: attach a virtual USB stick backed by a raw disk image.
@@ -103,6 +103,45 @@ Both modes support the following options:
     ```
     ./factory login --usb-storage usbstick.img
     ```
+
+
+### Other commands
+* `export`: Save an image dump. Creates a tar archive at stdout.
+
+    ```
+    ./factory export cloud > cloud.factory
+    ```
+
+* `import`: Load an image dump from stdin.
+
+    ```
+    ./factory import cloud < cloud.factory
+    ```
+
+* `fork`: Clone an image using copy-on-write.
+
+    ```
+    ./factory fork cloud mycloud
+    ./factory run --image mycloud --persist
+    ```
+
+* `rm`: Remove an image.
+
+    ```
+    ./factory rm cloud
+    ```
+
+* `console`: Run a VM and connect to serial console. In this mode, Factory does
+  not attempt to ssh into the VM, therefore shared folders and swapfile are not
+  available. This is a useful way to run generic VMs, e.g. a Windows guest, or
+  manually installing a Linux distribution from an ISO.
+
+    ```
+    ./factory console --image cloud
+    ```
+
+  Type `<ctrl-o>` to kill the VM.
+
 
 ### Windows
 Factory is mainly designed to run automated jobs in headless cloud VMs, but
