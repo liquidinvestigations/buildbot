@@ -79,7 +79,7 @@ def open_qmp(qmp_path):
     qmp = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
         qmp.connect(qmp_path)
-    except ConnectionRefusedError:
+    except (ConnectionRefusedError, FileNotFoundError):
         return None
     else:
         return qmp
@@ -202,13 +202,19 @@ class VM:
             f.write(SSH_PRIVKEY)
         (self.var / 'id_ed25519').chmod(0o600)
 
+        disk_img = self.platform_home / 'disk.img'
         self.local_disk = self.var / 'local-disk.img'
-        subprocess.run([
-            'qemu-img', 'create', '-q',
-            '-f', 'qcow2',
-            '-b', str(self.platform_home / 'disk.img'),
-            str(self.local_disk),
-        ], check=True)
+
+        if self.options.persist:
+            self.local_disk.symlink_to(disk_img)
+
+        else:
+            subprocess.run([
+                'qemu-img', 'create', '-q',
+                '-f', 'qcow2',
+                '-b', str(disk_img),
+                str(self.local_disk),
+            ], check=True)
 
     @contextmanager
     def var_folder(self):
@@ -389,9 +395,6 @@ class VM:
         print_progress('\n')
         raise RuntimeError("VM did not shut down normally")
 
-    def commit(self):
-        echo_run(['qemu-img', 'commit', str(self.local_disk)])
-
     @contextmanager
     def boot(self):
         with cd(self.var):
@@ -407,18 +410,8 @@ class VM:
 
                 yield
 
-                if self.options.commit:
+                if self.options.persist:
                     self.shutdown()
-
-                    def confirm_commit():
-                        text = input("Commit? [Y/n]: ")
-                        return text.strip().lower() in ['', 'y']
-
-                    if self.options.yes or confirm_commit():
-                        self.commit()
-
-                    else:
-                        logger.info("Aborting commit")
 
             finally:
                 self.qemu.kill()
@@ -467,8 +460,7 @@ def add_vm_arguments(parser):
     parser.add_argument('--cdrom', action='append', default=[])
     parser.add_argument('--usb-storage', action='append', default=[])
     parser.add_argument('--swap', default='2G')
-    parser.add_argument('--commit', action='store_true')
-    parser.add_argument('-y', '--yes', action='store_true')
+    parser.add_argument('--persist', action='store_true')
 
 
 def run_factory(*args):
