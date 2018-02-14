@@ -541,6 +541,43 @@ def import_image(*args):
         subprocess.run(['tar', 'x'], check=True)
 
 
+def fork_image(*args):
+    parser = ArgumentParser()
+    parser.add_argument('base_image')
+    parser.add_argument('new_image')
+    options = parser.parse_args(args)
+
+    base_image_dir = paths.IMAGES / options.base_image
+    new_image_dir = paths.IMAGES / options.new_image
+    new_image_dir.mkdir(parents=True)
+
+    for base_file in base_image_dir.iterdir():
+        new_file = new_image_dir / base_file.name
+
+        if base_file.name == 'disk.img':
+            echo_run([
+                'qemu-img', 'create', '-q',
+                '-f', 'qcow2',
+                '-b', str(base_image_dir / 'disk.img'),
+                str(new_image_dir / 'disk.img'),
+            ])
+
+        else:
+            new_file.symlink_to(base_file)
+
+
+def remove_image(*args):
+    parser = ArgumentParser()
+    parser.add_argument('image')
+    options = parser.parse_args(args)
+
+    image_dir = paths.IMAGES / options.image
+    for file in image_dir.iterdir():
+        file.unlink()
+
+    image_dir.rmdir()
+
+
 CLOUD_INIT_YML = """\
 #cloud-config
 password: ubuntu
@@ -712,6 +749,8 @@ COMMANDS = {
     'create': create_image,
     'export': export_image,
     'import': import_image,
+    'fork': fork_image,
+    'rm': remove_image,
 }
 
 DEFAULTS = {
