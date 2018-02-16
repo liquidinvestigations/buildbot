@@ -151,3 +151,11 @@ def test_cpus(factory):
     factory.main(['run', '-s', '3', 'grep', 'processor', '/proc/cpuinfo'])
     output = factory.ssh_result.stdout.decode('latin1')
     assert len(output.splitlines()) == 3
+
+
+def test_persist(factory):
+    factory.main(['fork', 'cloud', 'elephant'])
+    factory.main(['run', '--image', 'elephant', '--persist', 'touch', 'trunk'])
+    factory.main(['run', '--image', 'elephant', 'ls'])
+    output = factory.ssh_result.stdout.decode('latin1')
+    assert output.strip() == 'trunk'
