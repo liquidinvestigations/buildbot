@@ -1,4 +1,5 @@
 import sys
+import subprocess
 from contextlib import contextmanager
 from tempfile import TemporaryDirectory
 from pathlib import Path
@@ -51,6 +52,23 @@ def tmpdir_factory():
                     tmp_paths = factory_module.Paths(tmp_repo)
                     mocks.setattr(factory_module, 'paths', tmp_paths)
                     self.main = factory_module.main
+
+                    self.ssh_input = b''
+                    mocks.setattr(
+                        factory_module.VM,
+                        'invoke_ssh',
+                        self.invoke_ssh,
+                    )
+
+                def invoke_ssh(self, command):
+                    self.ssh_result = subprocess.run(
+                        command,
+                        input=self.ssh_input,
+                        stdout=subprocess.PIPE,
+                        timeout=120,
+                        check=True,
+                    )
+
 
             yield FactoryWrapper()
 

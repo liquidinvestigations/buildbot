@@ -132,3 +132,22 @@ def test_login(factory, shared):
 
     assert (shared / 'done.txt').is_file()
     assert b'huzzah' in result.stdout
+
+
+def test_memory(factory):
+    factory.main(['run', '-m', '800', '--swap', '300M', 'free', '-m'])
+
+    output = factory.ssh_result.stdout.decode('latin1')
+    values = {}
+    for line in output.splitlines()[1:]:
+        label, value = line.split()[:2]
+        values[label] = int(value)
+
+    assert 750 < values['Mem:'] <= 800
+    assert 290 < values['Swap:'] <= 300
+
+
+def test_cpus(factory):
+    factory.main(['run', '-s', '3', 'grep', 'processor', '/proc/cpuinfo'])
+    output = factory.ssh_result.stdout.decode('latin1')
+    assert len(output.splitlines()) == 3
