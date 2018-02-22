@@ -363,7 +363,7 @@ class VM:
 
         raise RuntimeError("VM not up after {} seconds".format(timeout))
 
-    def wait_for_qemu_sockets(self, timeout=5):
+    def wait_for_qemu_sockets(self, timeout=30):
         t0 = time()
         files = [self.var / name for name in ['vm.qmp', 'vm.mon']]
 
