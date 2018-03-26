@@ -280,6 +280,8 @@ class VM:
         for path in self.cdrom_paths:
             yield from ['-drive', 'file={},media=cdrom'.format(path)]
 
+        if self.usb_storage_paths:
+             yield from ['-device', 'piix3-usb-uhci']
         for n, path in enumerate(self.usb_storage_paths):
             yield from [
                 '-device', 'usb-storage,drive=usb{}'.format(n),
