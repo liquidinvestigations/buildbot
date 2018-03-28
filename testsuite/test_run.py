@@ -143,7 +143,7 @@ def test_memory(factory):
         label, value = line.split()[:2]
         values[label] = int(value)
 
-    assert 750 < values['Mem:'] <= 800
+    assert 600 < values['Mem:'] <= 800
     assert 290 < values['Swap:'] <= 300
 
 
